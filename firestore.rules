@@ -1,0 +1,112 @@
+// firestore.rules
+//
+// Deploy with: firebase deploy --only firestore:rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helper functions ─────────────────────────────────────────────────────
+
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return request.auth.uid == uid;
+    }
+
+    function getUserRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isOrganizer() {
+      return isLoggedIn() && getUserRole() == 'organizer';
+    }
+
+    function isVolunteer() {
+      return isLoggedIn() && getUserRole() == 'volunteer';
+    }
+
+    function isAdmin() {
+      return isLoggedIn() && getUserRole() == 'admin';
+    }
+
+    function isApprovedOrganizer() {
+      return isOrganizer() &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizerApprovalStatus == 'approved';
+    }
+
+    // ── Users collection ─────────────────────────────────────────────────────
+    match /users/{userId} {
+      // Anyone logged in can read any user profile (for organizer browse)
+      allow read: if isLoggedIn();
+
+      // Users can only create volunteer or organizer accounts for themselves.
+      allow create: if isLoggedIn()
+        && isOwner(userId)
+        && request.resource.data.id == request.auth.uid
+        && request.resource.data.role in ['volunteer', 'organizer']
+        && (
+          (request.resource.data.role == 'volunteer'
+            && request.resource.data.organizerApprovalStatus == 'notRequired')
+          ||
+          (request.resource.data.role == 'organizer'
+            && request.resource.data.organizerApprovalStatus == 'pending')
+        );
+
+      // Users may edit their own profile details, but cannot promote themselves
+      // or change their organizer approval state. Admins can review and update.
+      allow update: if (
+        isLoggedIn()
+        && isOwner(userId)
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.organizerApprovalStatus == resource.data.organizerApprovalStatus
+        && request.resource.data.approvalNotes == resource.data.approvalNotes
+      ) || isAdmin();
+
+      // Prevent deletion (soft-delete only)
+      allow delete: if false;
+    }
+
+    // ── Events collection ────────────────────────────────────────────────────
+    match /events/{eventId} {
+      // Published events can be read by anyone logged in
+      allow read: if isLoggedIn();
+
+      // Only organizers can create events
+      allow create: if isApprovedOrganizer()
+        && request.resource.data.organizerId == request.auth.uid;
+
+      // Only the event's own organizer can update/delete
+      allow update: if isApprovedOrganizer()
+        && resource.data.organizerId == request.auth.uid;
+
+      allow delete: if isApprovedOrganizer()
+        && resource.data.organizerId == request.auth.uid;
+    }
+
+    // ── Applications collection ───────────────────────────────────────────────
+    match /applications/{appId} {
+      // Volunteer can read their own applications
+      // Organizer can read applications for their events
+      allow read: if isLoggedIn() && (
+        resource.data.volunteerId == request.auth.uid ||
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid
+      );
+
+      // Only volunteers can create applications
+      allow create: if isVolunteer()
+        && request.resource.data.volunteerId == request.auth.uid
+        && request.resource.data.status == 'pending';
+
+      // Only the event's organizer can update status (accept/reject)
+      allow update: if isApprovedOrganizer()
+        && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+
+      // No deletion
+      allow delete: if false;
+    }
+  }
+}

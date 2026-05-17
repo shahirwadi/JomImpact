@@ -1,0 +1,18 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "JomImpact",
+      "request": "launch",
+      "type": "dart",
+      "toolArgs": [
+        "--dart-define-from-file=env/dev.json"
+      ]
+    },
+    {
+      "name": "JomImpact (No Cloudinary)",
+      "request": "launch",
+      "type": "dart"
+    }
+  ]
+}

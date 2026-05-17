@@ -1,0 +1,11 @@
+{
+  "name": "jomimpact-dev-tools",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "seed:demo": "node seed_demo_accounts.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.4.0"
+  }
+}
