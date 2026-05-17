@@ -38,6 +38,14 @@ class _AdminOrganizerRequestsScreenState
           ? const Center(
               child: CircularProgressIndicator(color: AppTheme.primary),
             )
+          : vm.error != null
+              ? EmptyState(
+                  icon: Icons.error_outline,
+                  title: 'Unable to load requests',
+                  message: vm.error!,
+                  actionLabel: 'Try Again',
+                  onAction: vm.loadPendingOrganizerRequests,
+                )
           : vm.pendingOrganizerRequests.isEmpty
               ? EmptyState(
                   icon: Icons.fact_check_outlined,

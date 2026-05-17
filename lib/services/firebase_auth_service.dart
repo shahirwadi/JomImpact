@@ -91,15 +91,19 @@ class FirebaseAuthService {
   Future<List<UserModel>> getPendingOrganizerRequests() async {
     final snap = await _db
         .collection('users')
-        .where('role', isEqualTo: enumValueName(UserRole.organizer))
         .where(
           'organizerApprovalStatus',
           isEqualTo: enumValueName(OrganizerApprovalStatus.pending),
         )
-        .orderBy('createdAt', descending: false)
         .get();
 
-    return snap.docs.map((doc) => UserModel.fromMap(doc.data())).toList();
+    final requests = snap.docs
+        .map((doc) => UserModel.fromMap(doc.data()))
+        .where((user) => user.role == UserRole.organizer)
+        .toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    return requests;
   }
 
   Future<List<UserModel>> getApprovedOrganizers() async {
