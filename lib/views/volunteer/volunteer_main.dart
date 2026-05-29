@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../utils/app_theme.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/event_viewmodel.dart';
+import '../shared/feed_screen.dart';
 import 'volunteer_browse_screen.dart';
 import 'volunteer_organizers_screen.dart';
 import 'volunteer_my_events_screen.dart';
@@ -21,6 +22,7 @@ class _VolunteerMainState extends State<VolunteerMain> {
 
   final _screens = const [
     VolunteerBrowseScreen(),
+    FeedScreen(),
     VolunteerOrganizersScreen(),
     VolunteerMyEventsScreen(),
     VolunteerProfileScreen(),
@@ -61,6 +63,10 @@ class _VolunteerMainState extends State<VolunteerMain> {
                 icon: Icon(Icons.explore_outlined),
                 activeIcon: Icon(Icons.explore),
                 label: 'Discover'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.forum_outlined),
+                activeIcon: Icon(Icons.forum),
+                label: 'Feed'),
             BottomNavigationBarItem(
                 icon: Icon(Icons.business_outlined),
                 activeIcon: Icon(Icons.business),
