@@ -94,6 +94,27 @@ class _LoginScreenState extends State<LoginScreen> {
                 const Text('Sign in to your account',
                     style: TextStyle(fontSize: 14, color: AppTheme.textMedium)),
                 const SizedBox(height: 24),
+                if (vm.error != null) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.error.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppTheme.error.withOpacity(0.25),
+                      ),
+                    ),
+                    child: Text(
+                      vm.error!,
+                      style: const TextStyle(
+                        color: AppTheme.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
 
                 // Quick login buttons
                 // Container(

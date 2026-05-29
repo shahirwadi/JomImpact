@@ -3,12 +3,17 @@
 // Replaces MockDataService with FirebaseAuthService.
 // Listens to Firebase Auth state so the app auto-logs-in on restart.
 
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import '../models/user_model.dart';
 import '../services/firebase_auth_service.dart';
 
 class AuthViewModel extends ChangeNotifier {
+  static const _startupAuthTimeout = Duration(seconds: 8);
+  static const _authOperationTimeout = Duration(seconds: 15);
+
   final FirebaseAuthService _authService = FirebaseAuthService();
 
   UserModel? _currentUser;
@@ -32,21 +37,41 @@ class AuthViewModel extends ChangeNotifier {
 
   Future<void> _init() async {
     _isLoading = true;
+    _error = null;
     notifyListeners();
 
-    final user = await _authService.fetchCurrentUser();
-    _currentUser = user;
-
-    _isLoading = false;
-    notifyListeners();
+    try {
+      _currentUser = await _authService
+          .fetchCurrentUser()
+          .timeout(_startupAuthTimeout);
+    } on TimeoutException {
+      _currentUser = null;
+      _error = 'Unable to restore your session. Please sign in again.';
+    } catch (e) {
+      _currentUser = null;
+      _error = 'Something went wrong while restoring your session.';
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
 
     _authService.authStateChanges.listen((User? fbUser) async {
       if (fbUser == null) {
         _currentUser = null;
         notifyListeners();
       } else if (_currentUser == null || _currentUser!.id != fbUser.uid) {
-        final user = await _authService.fetchCurrentUser();
-        _currentUser = user;
+        try {
+          _currentUser = await _authService
+              .fetchCurrentUser()
+              .timeout(_startupAuthTimeout);
+          _error = null;
+        } on TimeoutException {
+          _currentUser = null;
+          _error = 'Unable to restore your session. Please sign in again.';
+        } catch (e) {
+          _currentUser = null;
+          _error = 'Something went wrong while restoring your session.';
+        }
         notifyListeners();
       }
     });
@@ -58,12 +83,20 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _currentUser = await _authService.login(email: email, password: password);
+      _currentUser = await _authService
+          .login(email: email, password: password)
+          .timeout(_authOperationTimeout);
       _isLoading = false;
       notifyListeners();
       return true;
     } on FirebaseAuthException catch (e) {
       _error = _friendlyAuthError(e.code);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } on TimeoutException {
+      _error =
+          'Sign in is taking too long. Check your connection and try again.';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -87,14 +120,26 @@ class AuthViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      _currentUser = await _authService.register(
-        name: name, email: email, password: password, role: role, organization: organization,
-      );
+      _currentUser = await _authService
+          .register(
+            name: name,
+            email: email,
+            password: password,
+            role: role,
+            organization: organization,
+          )
+          .timeout(_authOperationTimeout);
       _isLoading = false;
       notifyListeners();
       return true;
     } on FirebaseAuthException catch (e) {
       _error = _friendlyAuthError(e.code);
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    } on TimeoutException {
+      _error =
+          'Registration is taking too long. Check your connection and try again.';
       _isLoading = false;
       notifyListeners();
       return false;

@@ -14,6 +14,8 @@ class EventViewModel extends ChangeNotifier {
   List<EventModel> _allEvents = [];
   List<EventModel> _organizerEvents = [];
   List<ApplicationModel> _applications = [];
+  List<VolunteerHourRecord> _eventHourRecords = [];
+  List<VolunteerHourRecord> _volunteerHourHistory = [];
   List<UserModel> _organizers = [];
   bool _isLoading = false;
   String? _error;
@@ -26,6 +28,8 @@ class EventViewModel extends ChangeNotifier {
   List<EventModel> get allEvents => _filteredEvents;
   List<EventModel> get organizerEvents => _organizerEvents;
   List<ApplicationModel> get applications => _applications;
+  List<VolunteerHourRecord> get eventHourRecords => _eventHourRecords;
+  List<VolunteerHourRecord> get volunteerHourHistory => _volunteerHourHistory;
   List<UserModel> get organizers => _organizers;
   bool get isLoading => _isLoading;
   String? get error => _error;
@@ -87,12 +91,37 @@ class EventViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> loadVolunteerHourRecordsForEvent(String eventId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _eventHourRecords = await _service.getVolunteerHourRecordsForEvent(eventId);
+    } catch (e) {
+      _error = e.toString();
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
   // ── Load volunteer's own applications ────────────────────────────────────
   Future<void> loadVolunteerApplications(String volunteerId) async {
     _isLoading = true;
     notifyListeners();
     try {
       _applications = await _service.getApplicationsForVolunteer(volunteerId);
+    } catch (e) {
+      _error = e.toString();
+    }
+    _isLoading = false;
+    notifyListeners();
+  }
+
+  Future<void> loadVolunteerHourHistory(String volunteerId) async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      _volunteerHourHistory =
+          await _service.getVolunteerHourHistoryForVolunteer(volunteerId);
     } catch (e) {
       _error = e.toString();
     }
@@ -253,6 +282,79 @@ class EventViewModel extends ChangeNotifier {
       return true;
     } catch (e) {
       _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  VolunteerHourRecord? getHourRecordForVolunteer(String volunteerId) {
+    try {
+      return _eventHourRecords.firstWhere((r) => r.volunteerId == volunteerId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> setVolunteerHours({
+    required EventModel event,
+    required ApplicationModel application,
+    required int hours,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await _service.setVolunteerHours(
+        event: event,
+        application: application,
+        hours: hours,
+      );
+      _eventHourRecords =
+          await _service.getVolunteerHourRecordsForEvent(event.id);
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      final raw = e.toString();
+      if (raw.contains('invalid_hours')) {
+        _error = 'Volunteer hours must be greater than 0.';
+      } else if (raw.contains('volunteer_not_accepted')) {
+        _error = 'Only accepted volunteers can receive approved hours.';
+      } else if (raw.contains('event_not_finished')) {
+        _error = 'Volunteer hours can only be set after the event has finished.';
+      } else if (raw.contains('hours_already_approved')) {
+        _error = 'This volunteer hour record has already been approved.';
+      } else {
+        _error = raw;
+      }
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> approveVolunteerHours({
+    required String recordId,
+    required String eventId,
+    String? volunteerId,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await _service.approveVolunteerHours(recordId);
+      _eventHourRecords =
+          await _service.getVolunteerHourRecordsForEvent(eventId);
+      if (volunteerId != null) {
+        _volunteerHourHistory =
+            await _service.getVolunteerHourHistoryForVolunteer(volunteerId);
+      }
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
       notifyListeners();
       return false;
     }

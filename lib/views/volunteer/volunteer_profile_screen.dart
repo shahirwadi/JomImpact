@@ -7,15 +7,41 @@ import '../../models/user_model.dart';
 import '../../services/cloudinary_image_service.dart';
 import '../../utils/app_theme.dart';
 import '../../viewmodels/auth_viewmodel.dart';
+import '../../viewmodels/event_viewmodel.dart';
 import '../shared/widgets.dart';
+import 'volunteer_hours_history_screen.dart';
 
-class VolunteerProfileScreen extends StatelessWidget {
+class VolunteerProfileScreen extends StatefulWidget {
   const VolunteerProfileScreen({super.key});
+
+  @override
+  State<VolunteerProfileScreen> createState() => _VolunteerProfileScreenState();
+}
+
+class _VolunteerProfileScreenState extends State<VolunteerProfileScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<AuthViewModel>().currentUser;
+      if (user != null) {
+        context.read<EventViewModel>().loadVolunteerHourHistory(user.id);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final authVm = context.watch<AuthViewModel>();
+    final eventVm = context.watch<EventViewModel>();
     final user = authVm.currentUser!;
+    final approvedHourHistory = eventVm.volunteerHourHistory;
+    final totalApprovedHours = approvedHourHistory.fold<int>(
+      0,
+      (sum, record) => sum + record.hours,
+    );
+    final completedEvents = approvedHourHistory.length;
+    final skillCount = user.skills.length;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -94,17 +120,26 @@ class VolunteerProfileScreen extends StatelessWidget {
                   // Stats
                   Row(children: [
                     _StatCard(
-                        value: '${user.totalHours ?? 0}',
+                        value: '${totalApprovedHours > 0 ? totalApprovedHours : (user.totalHours ?? 0)}',
                         label: 'Hours\nVolunteered',
-                        icon: Icons.schedule),
+                        icon: Icons.schedule,
+                        onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    const VolunteerHoursHistoryScreen(),
+                              ),
+                            )),
                     const SizedBox(width: 12),
-                    const _StatCard(
-                        value: '2',
+                    _StatCard(
+                        value: '$completedEvents',
                         label: 'Events\nJoined',
                         icon: Icons.event_available),
                     const SizedBox(width: 12),
-                    const _StatCard(
-                        value: '4', label: 'Skills\nListed', icon: Icons.star),
+                    _StatCard(
+                        value: '$skillCount',
+                        label: 'Skills\nListed',
+                        icon: Icons.star),
                   ]),
                   const SizedBox(height: 20),
 
@@ -374,33 +409,44 @@ class _StatCard extends StatelessWidget {
   final String value;
   final String label;
   final IconData icon;
+  final VoidCallback? onTap;
   const _StatCard(
-      {required this.value, required this.label, required this.icon});
+      {required this.value,
+      required this.label,
+      required this.icon,
+      this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppTheme.divider),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: AppTheme.primary, size: 20),
-            const SizedBox(height: 4),
-            Text(value,
-                style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.textDark)),
-            Text(label,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                    fontSize: 10, color: AppTheme.textLight, height: 1.3)),
-          ],
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.divider),
+            ),
+            child: Column(
+              children: [
+                Icon(icon, color: AppTheme.primary, size: 20),
+                const SizedBox(height: 4),
+                Text(value,
+                    style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.textDark)),
+                Text(label,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        fontSize: 10, color: AppTheme.textLight, height: 1.3)),
+              ],
+            ),
+          ),
         ),
       ),
     );

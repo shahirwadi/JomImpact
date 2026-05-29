@@ -15,6 +15,8 @@ class FirebaseEventService {
       _db.collection('events');
   CollectionReference<Map<String, dynamic>> get _applications =>
       _db.collection('applications');
+  CollectionReference<Map<String, dynamic>> get _volunteerHours =>
+      _db.collection('volunteer_hours');
   CollectionReference<Map<String, dynamic>> get _users =>
       _db.collection('users');
 
@@ -95,6 +97,18 @@ class FirebaseEventService {
     final appSnap =
         await _applications.where('eventId', isEqualTo: eventId).get();
     for (final doc in appSnap.docs) {
+      batch.delete(doc.reference);
+    }
+
+    final hoursSnap =
+        await _volunteerHours.where('eventId', isEqualTo: eventId).get();
+    for (final doc in hoursSnap.docs) {
+      final record = VolunteerHourRecord.fromMap(doc.data());
+      if (record.isApproved) {
+        batch.update(_users.doc(record.volunteerId), {
+          'totalHours': FieldValue.increment(-record.hours),
+        });
+      }
       batch.delete(doc.reference);
     }
 
@@ -267,6 +281,109 @@ class FirebaseEventService {
       ApplicationStatus.values,
       snap.docs.first.data()['status'],
     );
+  }
+
+  Future<List<VolunteerHourRecord>> getVolunteerHourRecordsForEvent(
+      String eventId) async {
+    final snap = await _volunteerHours
+        .where('eventId', isEqualTo: eventId)
+        .orderBy('assignedAt', descending: true)
+        .get();
+    return snap.docs.map((d) => VolunteerHourRecord.fromMap(d.data())).toList();
+  }
+
+  Future<List<VolunteerHourRecord>> getVolunteerHourHistoryForVolunteer(
+      String volunteerId) async {
+    final snap = await _volunteerHours
+        .where('volunteerId', isEqualTo: volunteerId)
+        .where(
+          'status',
+          isEqualTo: enumValueName(VolunteerHourApprovalStatus.approved),
+        )
+        .orderBy('approvedAt', descending: true)
+        .get();
+    return snap.docs.map((d) => VolunteerHourRecord.fromMap(d.data())).toList();
+  }
+
+  Future<void> setVolunteerHours({
+    required EventModel event,
+    required ApplicationModel application,
+    required int hours,
+  }) async {
+    if (hours <= 0) {
+      throw Exception('invalid_hours');
+    }
+    if (application.status != ApplicationStatus.accepted) {
+      throw Exception('volunteer_not_accepted');
+    }
+    if (DateTime.now().isBefore(event.endDate) &&
+        event.status != EventStatus.completed) {
+      throw Exception('event_not_finished');
+    }
+
+    final existingSnap = await _volunteerHours
+        .where('eventId', isEqualTo: event.id)
+        .where('volunteerId', isEqualTo: application.volunteerId)
+        .limit(1)
+        .get();
+
+    if (existingSnap.docs.isNotEmpty) {
+      final existing = VolunteerHourRecord.fromMap(existingSnap.docs.first.data());
+      if (existing.isApproved) {
+        throw Exception('hours_already_approved');
+      }
+      final updated = existing.copyWith(
+        hours: hours,
+        assignedAt: DateTime.now(),
+      );
+      await _volunteerHours.doc(existing.id).update(updated.toMap());
+      return;
+    }
+
+    final record = VolunteerHourRecord(
+      id: _uuid.v4(),
+      eventId: event.id,
+      eventTitle: event.title,
+      organizerId: event.organizerId,
+      volunteerId: application.volunteerId,
+      volunteerName: application.volunteerName,
+      volunteerPhotoUrl: application.volunteerPhotoUrl,
+      hours: hours,
+      status: VolunteerHourApprovalStatus.pending,
+      eventEndDate: event.endDate,
+      assignedAt: DateTime.now(),
+    );
+
+    await _volunteerHours.doc(record.id).set(record.toMap());
+  }
+
+  Future<void> approveVolunteerHours(String recordId) async {
+    await _db.runTransaction((tx) async {
+      final recordRef = _volunteerHours.doc(recordId);
+      final recordSnap = await tx.get(recordRef);
+      if (!recordSnap.exists) {
+        throw Exception('hours_record_not_found');
+      }
+
+      final record = VolunteerHourRecord.fromMap(recordSnap.data()!);
+      if (record.isApproved) {
+        return;
+      }
+
+      final userRef = _users.doc(record.volunteerId);
+      final userSnap = await tx.get(userRef);
+      if (!userSnap.exists) {
+        throw Exception('volunteer_not_found');
+      }
+
+      tx.update(recordRef, {
+        'status': enumValueName(VolunteerHourApprovalStatus.approved),
+        'approvedAt': DateTime.now().toIso8601String(),
+      });
+      tx.update(userRef, {
+        'totalHours': FieldValue.increment(record.hours),
+      });
+    });
   }
 
   // ══════════════════════════════════════════════════════════════

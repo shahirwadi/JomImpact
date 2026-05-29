@@ -5,6 +5,7 @@ import '../utils/enum_utils.dart';
 enum EventCategory { environment, education, health, community, animals, elderly, children, disaster }
 enum EventStatus { draft, published, ongoing, completed, cancelled }
 enum ApplicationStatus { pending, accepted, rejected }
+enum VolunteerHourApprovalStatus { pending, approved }
 
 class EventModel {
   final String id;
@@ -194,5 +195,95 @@ class ApplicationModel {
         status: enumFromName(ApplicationStatus.values, map['status']),
         message: map['message'],
         appliedAt: DateTime.parse(map['appliedAt']),
+      );
+}
+
+class VolunteerHourRecord {
+  final String id;
+  final String eventId;
+  final String eventTitle;
+  final String organizerId;
+  final String volunteerId;
+  final String volunteerName;
+  final String volunteerPhotoUrl;
+  final int hours;
+  final VolunteerHourApprovalStatus status;
+  final DateTime eventEndDate;
+  final DateTime assignedAt;
+  final DateTime? approvedAt;
+
+  VolunteerHourRecord({
+    required this.id,
+    required this.eventId,
+    required this.eventTitle,
+    required this.organizerId,
+    required this.volunteerId,
+    required this.volunteerName,
+    required this.volunteerPhotoUrl,
+    required this.hours,
+    required this.status,
+    required this.eventEndDate,
+    required this.assignedAt,
+    this.approvedAt,
+  });
+
+  bool get isApproved => status == VolunteerHourApprovalStatus.approved;
+
+  VolunteerHourRecord copyWith({
+    int? hours,
+    VolunteerHourApprovalStatus? status,
+    DateTime? assignedAt,
+    DateTime? approvedAt,
+  }) {
+    return VolunteerHourRecord(
+      id: id,
+      eventId: eventId,
+      eventTitle: eventTitle,
+      organizerId: organizerId,
+      volunteerId: volunteerId,
+      volunteerName: volunteerName,
+      volunteerPhotoUrl: volunteerPhotoUrl,
+      hours: hours ?? this.hours,
+      status: status ?? this.status,
+      eventEndDate: eventEndDate,
+      assignedAt: assignedAt ?? this.assignedAt,
+      approvedAt: approvedAt ?? this.approvedAt,
+    );
+  }
+
+  Map<String, dynamic> toMap() => {
+        'id': id,
+        'eventId': eventId,
+        'eventTitle': eventTitle,
+        'organizerId': organizerId,
+        'volunteerId': volunteerId,
+        'volunteerName': volunteerName,
+        'volunteerPhotoUrl': volunteerPhotoUrl,
+        'hours': hours,
+        'status': enumValueName(status),
+        'eventEndDate': eventEndDate.toIso8601String(),
+        'assignedAt': assignedAt.toIso8601String(),
+        'approvedAt': approvedAt?.toIso8601String(),
+      };
+
+  factory VolunteerHourRecord.fromMap(Map<String, dynamic> map) =>
+      VolunteerHourRecord(
+        id: map['id'],
+        eventId: map['eventId'],
+        eventTitle: map['eventTitle'],
+        organizerId: map['organizerId'],
+        volunteerId: map['volunteerId'],
+        volunteerName: map['volunteerName'],
+        volunteerPhotoUrl: map['volunteerPhotoUrl'] ?? '',
+        hours: map['hours'] ?? 0,
+        status: enumFromName(
+          VolunteerHourApprovalStatus.values,
+          map['status'],
+        ),
+        eventEndDate: DateTime.parse(map['eventEndDate']),
+        assignedAt: DateTime.parse(map['assignedAt']),
+        approvedAt: map['approvedAt'] != null
+            ? DateTime.parse(map['approvedAt'])
+            : null,
       );
 }
