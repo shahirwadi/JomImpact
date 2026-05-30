@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
@@ -11,20 +10,18 @@ class CloudinaryImageService {
     required XFile file,
     required String folder,
   }) async {
-    final config = await _loadConfig();
-
-    if (!config.isConfigured) {
+    if (!AppEnv.isCloudinaryConfigured) {
       throw Exception(
-        'Cloudinary is not configured. Add CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET to env/dev.json, then fully restart the app.',
+        'Cloudinary is not configured. Start the app with scripts/run_dev.ps1 or flutter run --dart-define-from-file=env/dev.json, or pass CLOUDINARY_CLOUD_NAME and CLOUDINARY_UPLOAD_PRESET with --dart-define.',
       );
     }
 
     final uri = Uri.parse(
-      'https://api.cloudinary.com/v1_1/${config.cloudName}/image/upload',
+      'https://api.cloudinary.com/v1_1/${AppEnv.cloudinaryCloudName}/image/upload',
     );
 
     final request = http.MultipartRequest('POST', uri)
-      ..fields['upload_preset'] = config.uploadPreset
+      ..fields['upload_preset'] = AppEnv.cloudinaryUploadPreset
       ..fields['folder'] = folder
       ..files.add(await http.MultipartFile.fromPath('file', file.path));
 
@@ -43,37 +40,4 @@ class CloudinaryImageService {
 
     return secureUrl;
   }
-
-  Future<_CloudinaryConfig> _loadConfig() async {
-    if (AppEnv.isCloudinaryConfigured) {
-      return const _CloudinaryConfig(
-        cloudName: AppEnv.cloudinaryCloudName,
-        uploadPreset: AppEnv.cloudinaryUploadPreset,
-      );
-    }
-
-    try {
-      final raw = await rootBundle.loadString('env/dev.json');
-      final json = jsonDecode(raw) as Map<String, dynamic>;
-      return _CloudinaryConfig(
-        cloudName: (json['CLOUDINARY_CLOUD_NAME'] as String?)?.trim() ?? '',
-        uploadPreset:
-            (json['CLOUDINARY_UPLOAD_PRESET'] as String?)?.trim() ?? '',
-      );
-    } catch (_) {
-      return const _CloudinaryConfig(cloudName: '', uploadPreset: '');
-    }
-  }
-}
-
-class _CloudinaryConfig {
-  final String cloudName;
-  final String uploadPreset;
-
-  const _CloudinaryConfig({
-    required this.cloudName,
-    required this.uploadPreset,
-  });
-
-  bool get isConfigured => cloudName.isNotEmpty && uploadPreset.isNotEmpty;
 }
