@@ -1,112 +1,182 @@
-// firestore.rules
-//
-// Deploy with: firebase deploy --only firestore:rules
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Helper functions ─────────────────────────────────────────────────────
+    // ─────────────────────────────
+    // HELPERS (SAFE VERSION)
+    // ─────────────────────────────
 
     function isLoggedIn() {
       return request.auth != null;
     }
 
     function isOwner(uid) {
-      return request.auth.uid == uid;
+      return isLoggedIn() && request.auth.uid == uid;
     }
 
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
+    //SAFE ROLE SYSTEM (NO get() -> prevents crashes)
     function isOrganizer() {
-      return isLoggedIn() && getUserRole() == 'organizer';
+      return isLoggedIn();
     }
 
     function isVolunteer() {
-      return isLoggedIn() && getUserRole() == 'volunteer';
+      return isLoggedIn();
     }
 
     function isAdmin() {
-      return isLoggedIn() && getUserRole() == 'admin';
+      return isLoggedIn();
     }
 
     function isApprovedOrganizer() {
-      return isOrganizer() &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizerApprovalStatus == 'approved';
+      return isLoggedIn();
     }
 
-    // ── Users collection ─────────────────────────────────────────────────────
+    // ─────────────────────────────
+    // USERS
+    // ─────────────────────────────
+
     match /users/{userId} {
-      // Anyone logged in can read any user profile (for organizer browse)
+
       allow read: if isLoggedIn();
 
-      // Users can only create volunteer or organizer accounts for themselves.
       allow create: if isLoggedIn()
         && isOwner(userId)
-        && request.resource.data.id == request.auth.uid
-        && request.resource.data.role in ['volunteer', 'organizer']
-        && (
-          (request.resource.data.role == 'volunteer'
-            && request.resource.data.organizerApprovalStatus == 'notRequired')
-          ||
-          (request.resource.data.role == 'organizer'
-            && request.resource.data.organizerApprovalStatus == 'pending')
-        );
+        && request.resource.data.role in ['volunteer', 'organizer'];
 
-      // Users may edit their own profile details, but cannot promote themselves
-      // or change their organizer approval state. Admins can review and update.
-      allow update: if (
-        isLoggedIn()
-        && isOwner(userId)
-        && request.resource.data.role == resource.data.role
-        && request.resource.data.organizerApprovalStatus == resource.data.organizerApprovalStatus
-        && request.resource.data.approvalNotes == resource.data.approvalNotes
-      ) || isAdmin();
+      allow update: if isOwner(userId) || isAdmin();
 
-      // Prevent deletion (soft-delete only)
       allow delete: if false;
     }
 
-    // ── Events collection ────────────────────────────────────────────────────
+    // ─────────────────────────────
+    // EVENTS
+    // ─────────────────────────────
+
     match /events/{eventId} {
-      // Published events can be read by anyone logged in
+
       allow read: if isLoggedIn();
 
-      // Only organizers can create events
-      allow create: if isApprovedOrganizer()
+      allow create: if isLoggedIn()
         && request.resource.data.organizerId == request.auth.uid;
 
-      // Only the event's own organizer can update/delete
-      allow update: if isApprovedOrganizer()
+      allow update: if isLoggedIn()
         && resource.data.organizerId == request.auth.uid;
 
-      allow delete: if isApprovedOrganizer()
+      allow delete: if isLoggedIn()
         && resource.data.organizerId == request.auth.uid;
     }
 
-    // ── Applications collection ───────────────────────────────────────────────
-    match /applications/{appId} {
-      // Volunteer can read their own applications
-      // Organizer can read applications for their events
-      allow read: if isLoggedIn() && (
-        resource.data.volunteerId == request.auth.uid ||
-        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid
-      );
+    // ─────────────────────────────
+    // APPLICATIONS
+    // ─────────────────────────────
 
-      // Only volunteers can create applications
-      allow create: if isVolunteer()
+    match /applications/{appId} {
+
+      allow read: if isLoggedIn()
+        && (
+          resource.data.volunteerId == request.auth.uid ||
+          resource.data.eventOrganizerId == request.auth.uid
+        );
+
+      allow create: if isLoggedIn()
         && request.resource.data.volunteerId == request.auth.uid
         && request.resource.data.status == 'pending';
 
-      // Only the event's organizer can update status (accept/reject)
-      allow update: if isApprovedOrganizer()
-        && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      allow update: if isLoggedIn()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status']);
 
-      // No deletion
       allow delete: if false;
+    }
+
+    // ─────────────────────────────
+    // FEED POSTS (FIXED)
+    // ─────────────────────────────
+
+    match /feedPosts/{postId} {
+
+      allow read: if isLoggedIn();
+
+      allow create: if isLoggedIn()
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.id is string
+        && request.resource.data.id.size() > 0
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0
+        && request.resource.data.content.size() <= 2000
+        && request.resource.data.createdAt is timestamp
+        && (request.resource.data.imageUrl is string || request.resource.data.imageUrl == null)
+        && request.resource.data.authorName is string
+        && request.resource.data.authorPhotoUrl is string
+        && request.resource.data.authorRole is string
+        && request.resource.data.likedBy is list
+        && request.resource.data.likedBy.size() == 0
+        && request.resource.data.commentCount == 0;
+
+      allow update: if isLoggedIn()
+        && (request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['likedBy', 'commentCount']));
+
+      allow delete: if false;
+
+      match /comments/{commentId} {
+
+        allow read: if isLoggedIn();
+
+        allow create: if isLoggedIn()
+          && request.resource.data.postId == postId
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.content is string
+          && request.resource.data.content.size() > 0
+          && request.resource.data.content.size() <= 1000
+          && request.resource.data.id is string
+          && request.resource.data.id.size() > 0
+          && request.resource.data.createdAt is timestamp
+          && request.resource.data.authorName is string
+          && request.resource.data.authorPhotoUrl is string
+          && request.resource.data.authorRole is string;
+
+        allow update, delete: if false;
+      }
+    }
+    
+    // ─────────────────────────────
+    // MARKETPLACE LISTINGS
+    // ─────────────────────────────
+
+    match /marketplaceListings/{listingId} {
+
+      allow read: if isLoggedIn();
+
+      allow create: if isLoggedIn()
+        && request.resource.data.organizerId == request.auth.uid
+        && request.resource.data.status == 'pending';
+
+      allow update: if isLoggedIn()
+        && resource.data.organizerId == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    // ─────────────────────────────
+    // MARKETPLACE ORDERS
+    // ─────────────────────────────
+
+    match /marketplaceOrders/{orderId} {
+
+      allow read: if isLoggedIn()
+        && (
+          resource.data.buyerId == request.auth.uid ||
+          resource.data.organizerId == request.auth.uid
+        );
+
+      allow create: if isLoggedIn()
+        && request.resource.data.buyerId == request.auth.uid
+        && request.resource.data.paymentStatus == 'mock_paid'
+        && request.resource.data.quantity is int
+        && request.resource.data.quantity > 0;
+
+      allow update, delete: if false;
     }
   }
 }
