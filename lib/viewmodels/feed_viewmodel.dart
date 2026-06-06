@@ -20,6 +20,8 @@ class FeedViewModel extends ChangeNotifier {
     String? imageUrl,
   }) async {
     if (content.trim().isEmpty && (imageUrl == null || imageUrl.isEmpty)) {
+      _error = 'Add some text or a photo before publishing.';
+      notifyListeners();
       return false;
     }
 

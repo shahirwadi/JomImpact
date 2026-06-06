@@ -6,6 +6,7 @@ import '../../utils/app_theme.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/event_viewmodel.dart';
 import '../shared/feed_screen.dart';
+import '../shared/marketplace_screen.dart';
 import 'volunteer_browse_screen.dart';
 import 'volunteer_organizers_screen.dart';
 import 'volunteer_my_events_screen.dart';
@@ -25,6 +26,7 @@ class _VolunteerMainState extends State<VolunteerMain> {
     FeedScreen(),
     VolunteerOrganizersScreen(),
     VolunteerMyEventsScreen(),
+    MarketplaceScreen(),
     VolunteerProfileScreen(),
   ];
 
@@ -75,6 +77,10 @@ class _VolunteerMainState extends State<VolunteerMain> {
                 icon: Icon(Icons.bookmark_outline),
                 activeIcon: Icon(Icons.bookmark),
                 label: 'My Events'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.storefront_outlined),
+                activeIcon: Icon(Icons.storefront),
+                label: 'Market'),
             BottomNavigationBarItem(
                 icon: Icon(Icons.person_outline),
                 activeIcon: Icon(Icons.person),

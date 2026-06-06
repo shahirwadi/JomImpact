@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import '../../utils/app_theme.dart';
 import '../shared/feed_screen.dart';
+import '../shared/marketplace_screen.dart';
 import 'organizer_dashboard_screen.dart';
 import 'organizer_events_screen.dart';
 import 'organizer_profile_screen.dart';
@@ -20,6 +21,7 @@ class _OrganizerMainState extends State<OrganizerMain> {
     OrganizerDashboardScreen(),
     FeedScreen(),
     OrganizerEventsScreen(),
+    MarketplaceScreen(),
     OrganizerProfileScreen(),
   ];
 
@@ -55,6 +57,10 @@ class _OrganizerMainState extends State<OrganizerMain> {
                 icon: Icon(Icons.event_outlined),
                 activeIcon: Icon(Icons.event),
                 label: 'My Events'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.storefront_outlined),
+                activeIcon: Icon(Icons.storefront),
+                label: 'Market'),
             BottomNavigationBarItem(
                 icon: Icon(Icons.person_outline),
                 activeIcon: Icon(Icons.person),
