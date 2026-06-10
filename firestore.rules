@@ -37,6 +37,14 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.organizerApprovalStatus == 'approved';
     }
 
+    function isFeedRole(role) {
+      return role in ['organizer', 'volunteer'];
+    }
+
+    function hasOptionalString(data, field) {
+      return data.get(field, null) == null || data.get(field, null) is string;
+    }
+
     // ── Users collection ─────────────────────────────────────────────────────
     match /users/{userId} {
       // Anyone logged in can read any user profile (for organizer browse)
@@ -107,6 +115,83 @@ service cloud.firestore {
 
       // No deletion
       allow delete: if false;
+    }
+
+    // Public social feed for organizers and volunteers.
+    match /feedPosts/{postId} {
+      allow read: if isLoggedIn();
+
+      allow create: if isLoggedIn()
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'authorId',
+          'authorName',
+          'authorPhotoUrl',
+          'authorRole',
+          'content',
+          'imageUrl',
+          'likedBy',
+          'commentCount',
+          'createdAt'
+        ])
+        && request.resource.data.id == postId
+        && request.resource.data.authorId == request.auth.uid
+        && request.resource.data.authorName is string
+        && request.resource.data.authorName.size() > 0
+        && hasOptionalString(request.resource.data, 'authorPhotoUrl')
+        && isFeedRole(request.resource.data.authorRole)
+        && request.resource.data.content is string
+        && request.resource.data.content.size() <= 2000
+        && (
+          request.resource.data.content.size() > 0 ||
+          (
+            request.resource.data.keys().hasAny(['imageUrl']) &&
+            request.resource.data.imageUrl is string &&
+            request.resource.data.imageUrl.size() > 0
+          )
+        )
+        && request.resource.data.likedBy is list
+        && request.resource.data.likedBy.size() == 0
+        && request.resource.data.commentCount == 0
+        && request.resource.data.createdAt is string;
+
+      allow update: if isLoggedIn()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['likedBy', 'commentCount'])
+        && request.resource.data.likedBy is list
+        && request.resource.data.commentCount is int
+        && request.resource.data.commentCount >= resource.data.commentCount;
+
+      allow delete: if false;
+
+      match /comments/{commentId} {
+        allow read: if isLoggedIn();
+
+        allow create: if isLoggedIn()
+          && request.resource.data.keys().hasOnly([
+            'id',
+            'postId',
+            'authorId',
+            'authorName',
+            'authorPhotoUrl',
+            'authorRole',
+            'content',
+            'createdAt'
+          ])
+          && request.resource.data.id == commentId
+          && request.resource.data.postId == postId
+          && request.resource.data.authorId == request.auth.uid
+          && request.resource.data.authorName is string
+          && request.resource.data.authorName.size() > 0
+          && hasOptionalString(request.resource.data, 'authorPhotoUrl')
+          && isFeedRole(request.resource.data.authorRole)
+          && request.resource.data.content is string
+          && request.resource.data.content.size() > 0
+          && request.resource.data.content.size() <= 1000
+          && request.resource.data.createdAt is string;
+
+        allow update, delete: if false;
+      }
     }
   }
 }

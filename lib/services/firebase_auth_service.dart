@@ -47,10 +47,7 @@ class FirebaseAuthService {
     );
 
     // 3. Write to Firestore
-    await _db
-        .collection('users')
-        .doc(uid)
-        .set(user.toMap());
+    await _db.collection('users').doc(uid).set(user.toMap());
 
     return user;
   }
@@ -81,10 +78,7 @@ class FirebaseAuthService {
 
   // ── Update user profile ───────────────────────────────────────────────────
   Future<UserModel> updateUser(UserModel user) async {
-    await _db
-        .collection('users')
-        .doc(user.id)
-        .update(user.toMap());
+    await _db.collection('users').doc(user.id).update(user.toMap());
     return user;
   }
 
