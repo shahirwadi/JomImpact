@@ -41,6 +41,10 @@ service cloud.firestore {
       return role in ['organizer', 'volunteer'];
     }
 
+    function isMarketplaceStatus(status) {
+      return status in ['pending', 'approved', 'rejected'];
+    }
+
     function hasOptionalString(data, field) {
       return data.get(field, null) == null || data.get(field, null) is string;
     }
@@ -192,6 +196,99 @@ service cloud.firestore {
 
         allow update, delete: if false;
       }
+    }
+
+    // Marketplace listings submitted by organizers and reviewed by admins.
+    match /marketplaceItems/{itemId} {
+      allow read: if isLoggedIn() && (
+        isAdmin() ||
+        resource.data.status == 'approved' ||
+        resource.data.organizerId == request.auth.uid
+      );
+
+      allow create: if isApprovedOrganizer()
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'organizerId',
+          'organizerName',
+          'title',
+          'description',
+          'price',
+          'imageUrl',
+          'status',
+          'adminNotes',
+          'reviewedBy',
+          'reviewedAt',
+          'createdAt'
+        ])
+        && request.resource.data.id == itemId
+        && request.resource.data.organizerId == request.auth.uid
+        && request.resource.data.organizerName is string
+        && request.resource.data.organizerName.size() > 0
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 120
+        && request.resource.data.description is string
+        && request.resource.data.description.size() > 0
+        && request.resource.data.description.size() <= 2000
+        && request.resource.data.price is number
+        && request.resource.data.price > 0
+        && hasOptionalString(request.resource.data, 'imageUrl')
+        && request.resource.data.status == 'pending'
+        && request.resource.data.adminNotes == null
+        && request.resource.data.reviewedBy == null
+        && request.resource.data.reviewedAt == null
+        && request.resource.data.createdAt is string;
+
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'adminNotes', 'reviewedBy', 'reviewedAt'])
+        && isMarketplaceStatus(request.resource.data.status)
+        && hasOptionalString(request.resource.data, 'adminNotes')
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt is string;
+
+      allow delete: if false;
+    }
+
+    // Purchase records created by volunteers when buying approved listings.
+    match /marketplacePurchases/{purchaseId} {
+      allow read: if isLoggedIn() && (
+        isAdmin() ||
+        resource.data.buyerId == request.auth.uid ||
+        resource.data.organizerId == request.auth.uid
+      );
+
+      allow create: if isVolunteer()
+        && request.resource.data.keys().hasOnly([
+          'id',
+          'itemId',
+          'itemTitle',
+          'organizerId',
+          'buyerId',
+          'buyerName',
+          'price',
+          'status',
+          'createdAt'
+        ])
+        && request.resource.data.id == purchaseId
+        && request.resource.data.buyerId == request.auth.uid
+        && request.resource.data.itemId is string
+        && request.resource.data.itemTitle is string
+        && request.resource.data.itemTitle.size() > 0
+        && request.resource.data.organizerId is string
+        && request.resource.data.buyerName is string
+        && request.resource.data.buyerName.size() > 0
+        && request.resource.data.price is number
+        && request.resource.data.price > 0
+        && request.resource.data.status == 'pendingPayment'
+        && request.resource.data.createdAt is string
+        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.status == 'approved'
+        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.title == request.resource.data.itemTitle
+        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.organizerId == request.resource.data.organizerId
+        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.price == request.resource.data.price;
+
+      allow update, delete: if false;
     }
   }
 }

@@ -9,6 +9,7 @@ import 'utils/app_theme.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'viewmodels/event_viewmodel.dart';
 import 'viewmodels/feed_viewmodel.dart';
+import 'viewmodels/marketplace_viewmodel.dart';
 import 'views/admin/admin_main.dart';
 import 'views/auth/login_screen.dart';
 import 'views/auth/organizer_approval_screen.dart';
@@ -33,6 +34,7 @@ class JomImpactApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthViewModel()),
         ChangeNotifierProvider(create: (_) => EventViewModel()),
         ChangeNotifierProvider(create: (_) => FeedViewModel()),
+        ChangeNotifierProvider(create: (_) => MarketplaceViewModel()),
       ],
       child: MaterialApp(
         title: 'JomImpact',

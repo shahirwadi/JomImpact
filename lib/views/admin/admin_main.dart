@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/app_theme.dart';
+import 'admin_marketplace_requests_screen.dart';
 import 'admin_organizer_requests_screen.dart';
 import 'admin_profile_screen.dart';
 
@@ -16,6 +17,7 @@ class _AdminMainState extends State<AdminMain> {
 
   final _screens = const [
     AdminOrganizerRequestsScreen(),
+    AdminMarketplaceRequestsScreen(),
     AdminProfileScreen(),
   ];
 
@@ -32,7 +34,12 @@ class _AdminMainState extends State<AdminMain> {
           BottomNavigationBarItem(
             icon: Icon(Icons.verified_user_outlined),
             activeIcon: Icon(Icons.verified_user),
-            label: 'Requests',
+            label: 'Organizers',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.storefront_outlined),
+            activeIcon: Icon(Icons.storefront),
+            label: 'Listings',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.admin_panel_settings_outlined),
