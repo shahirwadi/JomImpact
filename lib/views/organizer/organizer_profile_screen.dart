@@ -8,6 +8,7 @@ import '../../services/cloudinary_image_service.dart';
 import '../../utils/app_theme.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/event_viewmodel.dart';
+import '../shared/profile_post_history.dart';
 import '../shared/widgets.dart';
 
 class OrganizerProfileScreen extends StatelessWidget {
@@ -222,6 +223,8 @@ class OrganizerProfileScreen extends StatelessWidget {
                       ],
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  ProfilePostHistory(user: user),
                 ],
               ),
             ),

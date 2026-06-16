@@ -14,7 +14,8 @@ class OrganizerEventDetailScreen extends StatefulWidget {
   final EventModel event;
   const OrganizerEventDetailScreen({super.key, required this.event});
   @override
-  State<OrganizerEventDetailScreen> createState() => _OrganizerEventDetailScreenState();
+  State<OrganizerEventDetailScreen> createState() =>
+      _OrganizerEventDetailScreenState();
 }
 
 class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
@@ -45,10 +46,13 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
         title: const Text('Delete Event'),
         content: const Text('Are you sure? This cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete', style: TextStyle(color: AppTheme.error)),
+            child:
+                const Text('Delete', style: TextStyle(color: AppTheme.error)),
           ),
         ],
       ),
@@ -65,7 +69,9 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
   Widget build(BuildContext context) {
     final vm = context.watch<EventViewModel>();
     final catColor = CategoryHelper.getColor(_event.category);
-    final pending = vm.applications.where((a) => a.status == ApplicationStatus.pending).length;
+    final pending = vm.applications
+        .where((a) => a.status == ApplicationStatus.pending)
+        .length;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -78,8 +84,11 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
             actions: [
               IconButton(
                 icon: const Icon(Icons.edit_outlined, color: Colors.white),
-                onPressed: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => CreateEventScreen(eventToEdit: _event))),
+                onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            CreateEventScreen(eventToEdit: _event))),
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.white),
@@ -96,7 +105,7 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
                     borderRadius: BorderRadius.zero,
                   ),
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 60, 20, 16),
+                    padding: const EdgeInsets.fromLTRB(20, 40, 20, 40),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.end,
@@ -104,8 +113,12 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
                         EventStatusBadge(status: _event.status),
                         const SizedBox(height: 6),
                         Text(_event.title,
-                          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: Colors.white),
-                          maxLines: 2, overflow: TextOverflow.ellipsis),
+                            style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w800,
+                                color: Colors.white),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis),
                       ],
                     ),
                   ),
@@ -119,7 +132,10 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
               unselectedLabelColor: Colors.white60,
               tabs: [
                 const Tab(text: 'Overview'),
-                Tab(text: pending > 0 ? 'Applicants ($pending pending)' : 'Applicants'),
+                Tab(
+                    text: pending > 0
+                        ? 'Applicants ($pending pending)'
+                        : 'Applicants'),
               ],
             ),
           ),
@@ -135,12 +151,24 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
                 children: [
                   // Stats row
                   Row(children: [
-                    _EventStat(label: 'Volunteers', value: '${_event.currentVolunteers}', icon: Icons.people, color: catColor),
+                    _EventStat(
+                        label: 'Volunteers',
+                        value: '${_event.currentVolunteers}',
+                        icon: Icons.people,
+                        color: catColor),
                     const SizedBox(width: 10),
-                    _EventStat(label: 'Capacity', value: '${_event.maxVolunteers}', icon: Icons.event_seat, color: const Color(0xFF1565C0)),
+                    _EventStat(
+                        label: 'Capacity',
+                        value: '${_event.maxVolunteers}',
+                        icon: Icons.event_seat,
+                        color: const Color(0xFF1565C0)),
                     const SizedBox(width: 10),
-                    _EventStat(label: 'Spots Left', value: '${_event.spotsLeft}', icon: Icons.chair_outlined,
-                      color: _event.isFull ? AppTheme.error : AppTheme.success),
+                    _EventStat(
+                        label: 'Spots Left',
+                        value: '${_event.spotsLeft}',
+                        icon: Icons.chair_outlined,
+                        color:
+                            _event.isFull ? AppTheme.error : AppTheme.success),
                   ]),
                   const SizedBox(height: 16),
 
@@ -158,9 +186,15 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Registration Progress', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-                            Text('${(_event.fillRate * 100).toStringAsFixed(0)}%',
-                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: catColor)),
+                            const Text('Registration Progress',
+                                style: TextStyle(
+                                    fontSize: 13, fontWeight: FontWeight.w600)),
+                            Text(
+                                '${(_event.fillRate * 100).toStringAsFixed(0)}%',
+                                style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w700,
+                                    color: catColor)),
                           ],
                         ),
                         const SizedBox(height: 8),
@@ -190,30 +224,55 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _DetailRow(icon: Icons.location_on_outlined, label: 'Location', value: _event.location),
-                        _DetailRow(icon: Icons.calendar_today_outlined, label: 'Start', value: DateFormat('d MMM yyyy, h:mm a').format(_event.startDate)),
-                        _DetailRow(icon: Icons.access_time, label: 'End', value: DateFormat('d MMM yyyy, h:mm a').format(_event.endDate)),
-                        _DetailRow(icon: CategoryHelper.getIcon(_event.category), label: 'Category', value: CategoryHelper.getName(_event.category)),
+                        _DetailRow(
+                            icon: Icons.location_on_outlined,
+                            label: 'Location',
+                            value: _event.location),
+                        _DetailRow(
+                            icon: Icons.calendar_today_outlined,
+                            label: 'Start',
+                            value: DateFormat('d MMM yyyy, h:mm a')
+                                .format(_event.startDate)),
+                        _DetailRow(
+                            icon: Icons.access_time,
+                            label: 'End',
+                            value: DateFormat('d MMM yyyy, h:mm a')
+                                .format(_event.endDate)),
+                        _DetailRow(
+                            icon: CategoryHelper.getIcon(_event.category),
+                            label: 'Category',
+                            value: CategoryHelper.getName(_event.category)),
                       ],
                     ),
                   ),
                   const SizedBox(height: 16),
 
-                  const Text('Description', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
+                  const Text('Description',
+                      style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textDark)),
                   const SizedBox(height: 8),
-                  Text(_event.description, style: const TextStyle(fontSize: 13, color: AppTheme.textMedium, height: 1.6)),
+                  Text(_event.description,
+                      style: const TextStyle(
+                          fontSize: 13,
+                          color: AppTheme.textMedium,
+                          height: 1.6)),
                 ],
               ),
             ),
 
             // ── Applicants Tab ──
             vm.isLoading
-                ? const Center(child: CircularProgressIndicator(color: AppTheme.primaryLight))
+                ? const Center(
+                    child:
+                        CircularProgressIndicator(color: AppTheme.primaryLight))
                 : vm.applications.isEmpty
                     ? const EmptyState(
                         icon: Icons.people_outline,
                         title: 'No applicants yet',
-                        message: 'Applications will appear here once volunteers apply')
+                        message:
+                            'Applications will appear here once volunteers apply')
                     : ListView.separated(
                         padding: const EdgeInsets.all(16),
                         itemCount: vm.applications.length,
@@ -240,12 +299,20 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
                                     const SizedBox(width: 10),
                                     Expanded(
                                       child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           Text(app.volunteerName,
-                                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
-                                          Text(DateFormat('d MMM yyyy').format(app.appliedAt),
-                                            style: const TextStyle(fontSize: 11, color: AppTheme.textLight)),
+                                              style: const TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w700,
+                                                  color: AppTheme.textDark)),
+                                          Text(
+                                              DateFormat('d MMM yyyy')
+                                                  .format(app.appliedAt),
+                                              style: const TextStyle(
+                                                  fontSize: 11,
+                                                  color: AppTheme.textLight)),
                                         ],
                                       ),
                                     ),
@@ -255,8 +322,11 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
                                 if (app.volunteerBio != null) ...[
                                   const SizedBox(height: 8),
                                   Text(app.volunteerBio!,
-                                    style: const TextStyle(fontSize: 12, color: AppTheme.textMedium),
-                                    maxLines: 2, overflow: TextOverflow.ellipsis),
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          color: AppTheme.textMedium),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis),
                                 ],
                                 if (app.message != null) ...[
                                   const SizedBox(height: 8),
@@ -267,32 +337,47 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text('"${app.message!}"',
-                                      style: const TextStyle(fontSize: 12, color: AppTheme.textMedium, fontStyle: FontStyle.italic)),
+                                        style: const TextStyle(
+                                            fontSize: 12,
+                                            color: AppTheme.textMedium,
+                                            fontStyle: FontStyle.italic)),
                                   ),
                                 ],
-                                if (app.status == ApplicationStatus.pending) ...[
+                                if (app.status ==
+                                    ApplicationStatus.pending) ...[
                                   const SizedBox(height: 10),
                                   Row(children: [
                                     Expanded(
                                       child: OutlinedButton(
-                                        onPressed: () => vm.updateApplicationStatus(app.id, ApplicationStatus.rejected, _event.id),
+                                        onPressed: () =>
+                                            vm.updateApplicationStatus(
+                                                app.id,
+                                                ApplicationStatus.rejected,
+                                                _event.id),
                                         style: OutlinedButton.styleFrom(
                                           minimumSize: const Size(0, 36),
                                           foregroundColor: AppTheme.error,
-                                          side: const BorderSide(color: AppTheme.error),
+                                          side: const BorderSide(
+                                              color: AppTheme.error),
                                         ),
-                                        child: const Text('Reject', style: TextStyle(fontSize: 12)),
+                                        child: const Text('Reject',
+                                            style: TextStyle(fontSize: 12)),
                                       ),
                                     ),
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: ElevatedButton(
-                                        onPressed: () => vm.updateApplicationStatus(app.id, ApplicationStatus.accepted, _event.id),
+                                        onPressed: () =>
+                                            vm.updateApplicationStatus(
+                                                app.id,
+                                                ApplicationStatus.accepted,
+                                                _event.id),
                                         style: ElevatedButton.styleFrom(
                                           minimumSize: const Size(0, 36),
                                           backgroundColor: AppTheme.success,
                                         ),
-                                        child: const Text('Accept', style: TextStyle(fontSize: 12)),
+                                        child: const Text('Accept',
+                                            style: TextStyle(fontSize: 12)),
                                       ),
                                     ),
                                   ]),
@@ -313,7 +398,11 @@ class _EventStat extends StatelessWidget {
   final String label, value;
   final IconData icon;
   final Color color;
-  const _EventStat({required this.label, required this.value, required this.icon, required this.color});
+  const _EventStat(
+      {required this.label,
+      required this.value,
+      required this.icon,
+      required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -329,8 +418,12 @@ class _EventStat extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 20),
             const SizedBox(height: 4),
-            Text(value, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: color)),
-            Text(label, style: const TextStyle(fontSize: 10, color: AppTheme.textLight)),
+            Text(value,
+                style: TextStyle(
+                    fontSize: 18, fontWeight: FontWeight.w800, color: color)),
+            Text(label,
+                style:
+                    const TextStyle(fontSize: 10, color: AppTheme.textLight)),
           ],
         ),
       ),
@@ -341,7 +434,8 @@ class _EventStat extends StatelessWidget {
 class _DetailRow extends StatelessWidget {
   final IconData icon;
   final String label, value;
-  const _DetailRow({required this.icon, required this.label, required this.value});
+  const _DetailRow(
+      {required this.icon, required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
@@ -352,9 +446,17 @@ class _DetailRow extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: AppTheme.textLight),
           const SizedBox(width: 10),
-          SizedBox(width: 72, child: Text(label,
-            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textMedium))),
-          Expanded(child: Text(value, style: const TextStyle(fontSize: 12, color: AppTheme.textDark))),
+          SizedBox(
+              width: 72,
+              child: Text(label,
+                  style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.textMedium))),
+          Expanded(
+              child: Text(value,
+                  style:
+                      const TextStyle(fontSize: 12, color: AppTheme.textDark))),
         ],
       ),
     );

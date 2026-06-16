@@ -8,7 +8,6 @@ import '../../viewmodels/event_viewmodel.dart';
 import '../shared/feed_screen.dart';
 import '../shared/marketplace_screen.dart';
 import 'volunteer_browse_screen.dart';
-import 'volunteer_organizers_screen.dart';
 import 'volunteer_my_events_screen.dart';
 import 'volunteer_profile_screen.dart';
 
@@ -22,11 +21,10 @@ class _VolunteerMainState extends State<VolunteerMain> {
   int _index = 0;
 
   final _screens = const [
-    VolunteerBrowseScreen(),
-    FeedScreen(),
-    VolunteerOrganizersScreen(),
-    VolunteerMyEventsScreen(),
     MarketplaceScreen(),
+    FeedScreen(),
+    VolunteerBrowseScreen(),
+    VolunteerMyEventsScreen(),
     VolunteerProfileScreen(),
   ];
 
@@ -62,25 +60,21 @@ class _VolunteerMainState extends State<VolunteerMain> {
           unselectedFontSize: 11,
           items: const [
             BottomNavigationBarItem(
-                icon: Icon(Icons.explore_outlined),
-                activeIcon: Icon(Icons.explore),
-                label: 'Discover'),
+                icon: Icon(Icons.storefront_outlined),
+                activeIcon: Icon(Icons.storefront),
+                label: 'Market'),
             BottomNavigationBarItem(
                 icon: Icon(Icons.forum_outlined),
                 activeIcon: Icon(Icons.forum),
                 label: 'Feed'),
             BottomNavigationBarItem(
-                icon: Icon(Icons.business_outlined),
-                activeIcon: Icon(Icons.business),
-                label: 'Organizers'),
+                icon: Icon(Icons.explore_outlined),
+                activeIcon: Icon(Icons.explore),
+                label: 'Discover'),
             BottomNavigationBarItem(
                 icon: Icon(Icons.bookmark_outline),
                 activeIcon: Icon(Icons.bookmark),
                 label: 'My Events'),
-            BottomNavigationBarItem(
-                icon: Icon(Icons.storefront_outlined),
-                activeIcon: Icon(Icons.storefront),
-                label: 'Market'),
             BottomNavigationBarItem(
                 icon: Icon(Icons.person_outline),
                 activeIcon: Icon(Icons.person),
