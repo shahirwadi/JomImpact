@@ -1,5 +1,6 @@
 // lib/models/feed_model.dart
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../utils/enum_utils.dart';
 import 'user_model.dart';
 
@@ -14,6 +15,7 @@ class FeedPostModel {
   final List<String> likedBy;
   final int commentCount;
   final DateTime createdAt;
+  final DateTime? updatedAt;
 
   FeedPostModel({
     required this.id,
@@ -26,11 +28,16 @@ class FeedPostModel {
     this.likedBy = const [],
     this.commentCount = 0,
     required this.createdAt,
+    this.updatedAt,
   });
 
   int get likeCount => likedBy.length;
 
   bool isLikedBy(String userId) => likedBy.contains(userId);
+
+  bool get wasEdited => updatedAt != null;
+
+  bool get canEdit => DateTime.now().difference(createdAt).inMinutes < 10;
 
   Map<String, dynamic> toMap() {
     return {
@@ -44,6 +51,7 @@ class FeedPostModel {
       'likedBy': likedBy,
       'commentCount': commentCount,
       'createdAt': createdAt.toIso8601String(),
+      if (updatedAt != null) 'updatedAt': updatedAt!.toIso8601String(),
     };
   }
 
@@ -58,7 +66,8 @@ class FeedPostModel {
       imageUrl: map['imageUrl'],
       likedBy: List<String>.from(map['likedBy'] ?? []),
       commentCount: map['commentCount'] ?? 0,
-      createdAt: DateTime.parse(map['createdAt']),
+      createdAt: _dateFromValue(map['createdAt']),
+      updatedAt: map['updatedAt'] == null ? null : _dateFromValue(map['updatedAt']),
     );
   }
 }
@@ -109,4 +118,10 @@ class FeedCommentModel {
       createdAt: DateTime.parse(map['createdAt']),
     );
   }
+}
+
+DateTime _dateFromValue(dynamic value) {
+  if (value is Timestamp) return value.toDate();
+  if (value is DateTime) return value;
+  return DateTime.parse(value as String);
 }

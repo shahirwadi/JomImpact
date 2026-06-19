@@ -22,6 +22,15 @@ class FirebaseFeedService {
             snap.docs.map((doc) => FeedPostModel.fromMap(doc.data())).toList());
   }
 
+  Stream<List<FeedPostModel>> userPostsStream(String userId) {
+    return _posts.where('authorId', isEqualTo: userId).snapshots().map((snap) {
+      final posts =
+          snap.docs.map((doc) => FeedPostModel.fromMap(doc.data())).toList();
+      posts.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return posts;
+    });
+  }
+
   Stream<List<FeedCommentModel>> commentsStream(String postId) {
     return _posts
         .doc(postId)
@@ -56,7 +65,10 @@ class FirebaseFeedService {
       createdAt: DateTime.now(),
     );
 
-    await _posts.doc(post.id).set(post.toMap());
+    await _posts.doc(post.id).set({
+      ...post.toMap(),
+      'createdAtTime': FieldValue.serverTimestamp(),
+    });
   }
 
   Future<void> addComment({
@@ -93,5 +105,28 @@ class FirebaseFeedService {
           ? FieldValue.arrayUnion([userId])
           : FieldValue.arrayRemove([userId]),
     });
+  }
+
+  Future<void> updatePost({
+    required String postId,
+    required String content,
+    String? imageUrl,
+  }) async {
+    final data = <String, dynamic>{
+      'content': content.trim(),
+      'updatedAt': DateTime.now().toIso8601String(),
+    };
+
+    if (imageUrl == null || imageUrl.trim().isEmpty) {
+      data['imageUrl'] = FieldValue.delete();
+    } else {
+      data['imageUrl'] = imageUrl.trim();
+    }
+
+    await _posts.doc(postId).update(data);
+  }
+
+  Future<void> deletePost(String postId) async {
+    await _posts.doc(postId).delete();
   }
 }

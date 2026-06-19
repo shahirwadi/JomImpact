@@ -8,6 +8,9 @@ import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/event_viewmodel.dart';
 import '../shared/widgets.dart';
 import 'event_detail_screen.dart';
+import 'organizer_public_profile_screen.dart';
+
+enum _DiscoverTab { events, organizers }
 
 class VolunteerBrowseScreen extends StatefulWidget {
   const VolunteerBrowseScreen({super.key});
@@ -17,6 +20,7 @@ class VolunteerBrowseScreen extends StatefulWidget {
 
 class _VolunteerBrowseScreenState extends State<VolunteerBrowseScreen> {
   final _searchCtrl = TextEditingController();
+  _DiscoverTab _selectedTab = _DiscoverTab.events;
 
   @override
   void initState() {
@@ -73,39 +77,81 @@ class _VolunteerBrowseScreenState extends State<VolunteerBrowseScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // Search bar
-                    TextField(
-                      controller: _searchCtrl,
-                      onChanged: vm.setSearchQuery,
-                      decoration: InputDecoration(
-                        hintText: 'Search events, locations...',
-                        prefixIcon: const Icon(Icons.search, color: AppTheme.textLight),
-                        suffixIcon: _searchCtrl.text.isNotEmpty
-                            ? IconButton(
-                                onPressed: () { _searchCtrl.clear(); vm.setSearchQuery(''); },
-                                icon: const Icon(Icons.close, color: AppTheme.textLight, size: 18))
-                            : null,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    // Category chips
                     SizedBox(
-                      height: 36,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [
-                          _CategoryChip(label: 'All', selected: vm.selectedCategory == null, onTap: () => vm.setCategory(null)),
-                          ...EventCategory.values.map((cat) => _CategoryChip(
-                            label: CategoryHelper.getName(cat),
-                            icon: CategoryHelper.getIcon(cat),
-                            color: CategoryHelper.getColor(cat),
-                            selected: vm.selectedCategory == cat,
-                            onTap: () => vm.setCategory(vm.selectedCategory == cat ? null : cat),
-                          )),
+                      width: double.infinity,
+                      child: SegmentedButton<_DiscoverTab>(
+                        segments: const [
+                          ButtonSegment(
+                            value: _DiscoverTab.events,
+                            icon: Icon(Icons.event_available_outlined),
+                            label: Text('Events'),
+                          ),
+                          ButtonSegment(
+                            value: _DiscoverTab.organizers,
+                            icon: Icon(Icons.business_outlined),
+                            label: Text('Organizers'),
+                          ),
                         ],
+                        selected: {_selectedTab},
+                        onSelectionChanged: (selection) {
+                          setState(() => _selectedTab = selection.first);
+                        },
                       ),
                     ),
+                    if (_selectedTab == _DiscoverTab.events) ...[
+                      const SizedBox(height: 14),
+                      TextField(
+                        controller: _searchCtrl,
+                        onChanged: vm.setSearchQuery,
+                        decoration: InputDecoration(
+                          hintText: 'Search events, locations...',
+                          prefixIcon: const Icon(
+                            Icons.search,
+                            color: AppTheme.textLight,
+                          ),
+                          suffixIcon: _searchCtrl.text.isNotEmpty
+                              ? IconButton(
+                                  onPressed: () {
+                                    _searchCtrl.clear();
+                                    vm.setSearchQuery('');
+                                  },
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: AppTheme.textLight,
+                                    size: 18,
+                                  ),
+                                )
+                              : null,
+                          contentPadding:
+                              const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        height: 36,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            _CategoryChip(
+                              label: 'All',
+                              selected: vm.selectedCategory == null,
+                              onTap: () => vm.setCategory(null),
+                            ),
+                            ...EventCategory.values.map(
+                              (cat) => _CategoryChip(
+                                label: CategoryHelper.getName(cat),
+                                icon: CategoryHelper.getIcon(cat),
+                                color: CategoryHelper.getColor(cat),
+                                selected: vm.selectedCategory == cat,
+                                onTap: () => vm.setCategory(
+                                  vm.selectedCategory == cat ? null : cat,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                   ],
                 ),
@@ -113,18 +159,28 @@ class _VolunteerBrowseScreenState extends State<VolunteerBrowseScreen> {
             ),
 
             if (vm.isLoading)
-              const SliverFillRemaining(child: Center(child: CircularProgressIndicator(color: AppTheme.primaryLight)))
-            else if (vm.allEvents.isEmpty)
+              const SliverFillRemaining(
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: AppTheme.primaryLight,
+                  ),
+                ),
+              )
+            else if (_selectedTab == _DiscoverTab.events && vm.allEvents.isEmpty)
               SliverFillRemaining(
                 child: EmptyState(
                   icon: Icons.search_off,
                   title: 'No events found',
                   message: 'Try adjusting your search or filters',
                   actionLabel: 'Clear Filters',
-                  onAction: () { vm.setCategory(null); vm.setSearchQuery(''); _searchCtrl.clear(); },
+                  onAction: () {
+                    vm.setCategory(null);
+                    vm.setSearchQuery('');
+                    _searchCtrl.clear();
+                  },
                 ),
               )
-            else
+            else if (_selectedTab == _DiscoverTab.events)
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
                 sliver: SliverGrid(
@@ -139,11 +195,47 @@ class _VolunteerBrowseScreenState extends State<VolunteerBrowseScreen> {
                       final event = vm.allEvents[i];
                       return EventCard(
                         event: event,
-                        onTap: () => Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => EventDetailScreen(event: event))),
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => EventDetailScreen(event: event),
+                          ),
+                        ),
                       );
                     },
                     childCount: vm.allEvents.length,
+                  ),
+                ),
+              )
+            else if (vm.getAllOrganizers().isEmpty)
+              const SliverFillRemaining(
+                child: EmptyState(
+                  icon: Icons.business,
+                  title: 'No organizers yet',
+                  message: 'Check back soon!',
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      if (index.isOdd) return const SizedBox(height: 12);
+                      final org = vm.getAllOrganizers()[index ~/ 2];
+                      return OrganizerCard(
+                        organizer: org,
+                        eventCount: org.totalEvents ?? 0,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                OrganizerPublicProfileScreen(organizer: org),
+                          ),
+                        ),
+                      );
+                    },
+                    childCount: vm.getAllOrganizers().length * 2 - 1,
                   ),
                 ),
               ),

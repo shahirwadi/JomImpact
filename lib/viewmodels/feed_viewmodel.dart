@@ -84,6 +84,42 @@ class FeedViewModel extends ChangeNotifier {
     }
   }
 
+  Future<bool> updatePost({
+    required String postId,
+    required String content,
+    String? imageUrl,
+  }) async {
+    if (content.trim().isEmpty && (imageUrl == null || imageUrl.isEmpty)) {
+      _error = 'Post needs text or a photo.';
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      await _service.updatePost(
+        postId: postId,
+        content: content,
+        imageUrl: imageUrl,
+      );
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deletePost(String postId) async {
+    try {
+      await _service.deletePost(postId);
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
   void clearError() {
     _error = null;
     notifyListeners();
