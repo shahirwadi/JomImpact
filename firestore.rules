@@ -112,10 +112,59 @@ service cloud.firestore {
         && request.resource.data.volunteerId == request.auth.uid
         && request.resource.data.status == 'pending';
 
-      // Only the event's organizer can update status (accept/reject)
-      allow update: if isApprovedOrganizer()
+      // Organizers manage the review pipeline; volunteers may only withdraw.
+      allow update: if (
+        isApprovedOrganizer()
         && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+        && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.status in ['published', 'ongoing']
+        && resource.data.status != 'withdrawn'
+        && request.resource.data.status in ['pending', 'reviewing', 'accepted', 'waitlisted', 'rejected']
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt is string
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'reviewedBy', 'reviewedAt'])
+      ) || (
+        isVolunteer()
+        && resource.data.volunteerId == request.auth.uid
+        && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.status in ['published', 'ongoing']
+        && request.resource.data.status == 'withdrawn'
+        && request.resource.data.withdrawnAt is string
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'withdrawnAt'])
+      ) || (
+        isApprovedOrganizer()
+        && resource.data.status == 'accepted'
+        && request.resource.data.status == 'accepted'
+        && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid
+        && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.status == 'completed'
+        && request.resource.data.attendanceStatus in ['attended', 'partial', 'noShow', 'excused']
+        && request.resource.data.verifiedHours is int
+        && request.resource.data.verifiedHours >= 0
+        && (
+          (request.resource.data.attendanceStatus in ['attended', 'partial']
+            && request.resource.data.verifiedHours > 0) ||
+          (request.resource.data.attendanceStatus in ['noShow', 'excused']
+            && request.resource.data.verifiedHours == 0)
+        )
+        && request.resource.data.attendanceReviewedBy == request.auth.uid
+        && request.resource.data.attendanceReviewedAt is string
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'attendanceStatus',
+          'verifiedHours',
+          'attendanceReviewedBy',
+          'attendanceReviewedAt'
+        ])
+      ) || (
+        isApprovedOrganizer()
+        && resource.data.status == 'accepted'
+        && request.resource.data.status == 'accepted'
+        && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid
+        && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.status == 'completed'
+        && request.resource.data.impactPoints == resource.data.verifiedHours * 10
+        && request.resource.data.pointsAwardedAt is string
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['impactPoints', 'pointsAwardedAt'])
+      );
 
       // No deletion
       allow delete: if false;
@@ -249,6 +298,43 @@ service cloud.firestore {
         && request.resource.data.reviewedAt is string;
 
       allow delete: if false;
+    }
+
+    // Organizer-only notes live separately because rules cannot hide fields.
+    match /applicationReviews/{appId} {
+      allow read: if isApprovedOrganizer()
+        && get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid;
+
+      allow create, update: if isApprovedOrganizer()
+        && request.resource.data.applicationId == appId
+        && request.resource.data.reviewedBy == request.auth.uid
+        && request.resource.data.reviewedAt is string
+        && hasOptionalString(request.resource.data, 'reviewNotes')
+        && get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.organizerId == request.auth.uid;
+
+      allow delete: if false;
+    }
+
+    match /impactAwards/{awardId} {
+      allow read: if isLoggedIn() && (
+        resource.data.volunteerId == request.auth.uid ||
+        get(/databases/$(database)/documents/events/$(resource.data.eventId)).data.organizerId == request.auth.uid
+      );
+
+      allow create: if isApprovedOrganizer()
+        && request.resource.data.awardedBy == request.auth.uid
+        && request.resource.data.points is int
+        && request.resource.data.hours is int
+        && request.resource.data.points == request.resource.data.hours * 10
+        && request.resource.data.points > 0
+        && request.resource.data.awardedAt is string
+        && get(/databases/$(database)/documents/events/$(request.resource.data.eventId)).data.organizerId == request.auth.uid
+        && get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data.volunteerId == request.resource.data.volunteerId
+        && get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data.status == 'accepted'
+        && get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data.attendanceStatus in ['attended', 'partial']
+        && get(/databases/$(database)/documents/applications/$(request.resource.data.applicationId)).data.verifiedHours == request.resource.data.hours;
+
+      allow update, delete: if false;
     }
 
     // Purchase records created by volunteers when buying approved listings.
