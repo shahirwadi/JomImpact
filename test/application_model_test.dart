@@ -1,5 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:jomimpact/models/event_model.dart';
+import 'package:jomimpact/models/user_model.dart';
+import 'package:jomimpact/utils/malaysia_states.dart';
 
 void main() {
   test('application pipeline fields round-trip through Firestore map', () {
@@ -54,5 +56,25 @@ void main() {
     expect(silver.badge, ImpactBadge.silver);
     expect(gold.badge, ImpactBadge.gold);
     expect(gold.progress, 1);
+  });
+
+  test('Malaysia state list and user state persistence stay consistent', () {
+    expect(malaysiaStates, hasLength(16));
+    expect(isMalaysiaState('Selangor'), isTrue);
+    expect(isMalaysiaState('Invalid State'), isFalse);
+
+    final user = UserModel(
+      id: 'volunteer-1',
+      name: 'Aina',
+      email: 'aina@example.com',
+      role: UserRole.volunteer,
+      location: 'Shah Alam',
+      state: 'Selangor',
+      createdAt: DateTime(2026, 6, 20),
+    );
+    final restored = UserModel.fromMap(user.toMap());
+
+    expect(restored.location, 'Shah Alam');
+    expect(restored.state, 'Selangor');
   });
 }

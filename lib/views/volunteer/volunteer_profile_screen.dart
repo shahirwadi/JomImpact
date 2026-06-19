@@ -7,6 +7,7 @@ import '../../models/event_model.dart';
 import '../../models/user_model.dart';
 import '../../services/cloudinary_image_service.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/malaysia_states.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/event_viewmodel.dart';
 import '../shared/profile_post_history.dart';
@@ -163,7 +164,11 @@ class VolunteerProfileScreen extends StatelessWidget {
                             const Icon(Icons.location_on_outlined,
                                 size: 14, color: AppTheme.textLight),
                             const SizedBox(width: 6),
-                            Text(user.location!,
+                            Text(
+                                [
+                                  user.location,
+                                  user.state,
+                                ].whereType<String>().join(', '),
                                 style: const TextStyle(
                                     fontSize: 13, color: AppTheme.textMedium)),
                           ]),
@@ -246,6 +251,7 @@ class VolunteerProfileScreen extends StatelessWidget {
     final bioCtrl = TextEditingController(text: user.bio);
     final locationCtrl = TextEditingController(text: user.location);
     final phoneCtrl = TextEditingController(text: user.phone);
+    String? selectedState = isMalaysiaState(user.state) ? user.state : null;
     final photoCtrl = TextEditingController(text: user.photoUrl);
     final picker = ImagePicker();
     final imageService = CloudinaryImageService();
@@ -356,7 +362,21 @@ class VolunteerProfileScreen extends StatelessWidget {
                     const SizedBox(height: 12),
                     TextField(
                       controller: locationCtrl,
-                      decoration: const InputDecoration(labelText: 'Location'),
+                      decoration:
+                          const InputDecoration(labelText: 'City / Area *'),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: selectedState,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                          labelText: 'State / Federal Territory *'),
+                      items: malaysiaStates
+                          .map((state) => DropdownMenuItem(
+                              value: state, child: Text(state)))
+                          .toList(),
+                      onChanged: (value) =>
+                          setModalState(() => selectedState = value),
                     ),
                     const SizedBox(height: 12),
                     TextField(
@@ -366,6 +386,16 @@ class VolunteerProfileScreen extends StatelessWidget {
                     const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: () async {
+                        if (locationCtrl.text.trim().isEmpty ||
+                            selectedState == null) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text('Location and state are required.'),
+                              backgroundColor: AppTheme.error,
+                            ),
+                          );
+                          return;
+                        }
                         final updated = user.copyWith(
                           name: nameCtrl.text.trim(),
                           photoUrl: photoCtrl.text.trim().isEmpty
@@ -374,6 +404,7 @@ class VolunteerProfileScreen extends StatelessWidget {
                           clearPhotoUrl: photoCtrl.text.trim().isEmpty,
                           bio: bioCtrl.text.trim(),
                           location: locationCtrl.text.trim(),
+                          state: selectedState,
                           phone: phoneCtrl.text.trim(),
                         );
                         await authVm.updateProfile(updated);

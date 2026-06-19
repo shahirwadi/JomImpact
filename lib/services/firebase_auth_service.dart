@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import '../utils/enum_utils.dart';
+import '../utils/malaysia_states.dart';
 
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -20,8 +21,13 @@ class FirebaseAuthService {
     required String email,
     required String password,
     required UserRole role,
+    required String location,
+    required String state,
     String? organization,
   }) async {
+    if (location.trim().isEmpty || !isMalaysiaState(state)) {
+      throw ArgumentError('A valid Malaysian location and state are required.');
+    }
     // 1. Create Firebase Auth account
     final credential = await _auth.createUserWithEmailAndPassword(
       email: email,
@@ -36,6 +42,8 @@ class FirebaseAuthService {
       name: name,
       email: email,
       role: role,
+      location: location,
+      state: state,
       organization: organization,
       skills: const [],
       totalEvents: role == UserRole.organizer ? 0 : null,
@@ -78,6 +86,11 @@ class FirebaseAuthService {
 
   // ── Update user profile ───────────────────────────────────────────────────
   Future<UserModel> updateUser(UserModel user) async {
+    if (user.role != UserRole.admin &&
+        ((user.location?.trim().isEmpty ?? true) ||
+            !isMalaysiaState(user.state))) {
+      throw ArgumentError('A valid Malaysian location and state are required.');
+    }
     await _db.collection('users').doc(user.id).update(user.toMap());
     return user;
   }

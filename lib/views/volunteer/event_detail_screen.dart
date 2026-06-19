@@ -112,8 +112,7 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
     final authVm = context.watch<AuthViewModel>();
     final user = authVm.currentUser;
     final catColor = CategoryHelper.getColor(_event.category);
-    final isVolunteer =
-        user != null && enumValueName(user.role) == 'volunteer';
+    final isVolunteer = user != null && enumValueName(user.role) == 'volunteer';
     final hasApplied = isVolunteer && vm.hasApplied(_event.id, user!.id);
     final appStatus =
         isVolunteer ? vm.getApplicationStatus(_event.id, user!.id) : null;
@@ -182,7 +181,11 @@ class _EventDetailScreenState extends State<EventDetailScreen> {
 
                   // Info chips
                   _InfoRow(
-                      icon: Icons.location_on_outlined, text: _event.location),
+                      icon: Icons.location_on_outlined,
+                      text: [_event.location, _event.state]
+                          .whereType<String>()
+                          .where((value) => value.isNotEmpty)
+                          .join(', ')),
                   const SizedBox(height: 8),
                   _InfoRow(
                       icon: Icons.calendar_today_outlined,

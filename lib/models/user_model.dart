@@ -15,6 +15,7 @@ class UserModel {
   final String? bio;
   final String? phone;
   final String? location;
+  final String? state;
   final List<String> skills; // for volunteers
   final String? organization; // for organizers
   final int? totalEvents; // for organizers
@@ -32,6 +33,7 @@ class UserModel {
     this.bio,
     this.phone,
     this.location,
+    this.state,
     this.skills = const [],
     this.organization,
     this.totalEvents,
@@ -54,6 +56,7 @@ class UserModel {
     String? bio,
     String? phone,
     String? location,
+    String? state,
     List<String>? skills,
     String? organization,
     int? totalEvents,
@@ -70,6 +73,7 @@ class UserModel {
       bio: bio ?? this.bio,
       phone: phone ?? this.phone,
       location: location ?? this.location,
+      state: state ?? this.state,
       skills: skills ?? this.skills,
       organization: organization ?? this.organization,
       totalEvents: totalEvents ?? this.totalEvents,
@@ -91,6 +95,7 @@ class UserModel {
       'bio': bio,
       'phone': phone,
       'location': location,
+      'state': state,
       'skills': skills,
       'organization': organization,
       'totalEvents': totalEvents,
@@ -114,12 +119,14 @@ class UserModel {
       bio: map['bio'],
       phone: map['phone'],
       location: map['location'],
+      state: map['state'],
       skills: List<String>.from(map['skills'] ?? []),
       organization: map['organization'],
       totalEvents: map['totalEvents'],
       totalHours: map['totalHours'],
       organizerApprovalStatus: OrganizerApprovalStatus.values.firstWhere(
-        (status) => enumValueName(status) ==
+        (status) =>
+            enumValueName(status) ==
             (rawApprovalStatus ??
                 (role == UserRole.organizer
                     ? enumValueName(OrganizerApprovalStatus.approved)

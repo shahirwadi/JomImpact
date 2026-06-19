@@ -80,6 +80,8 @@ class AuthViewModel extends ChangeNotifier {
     required String email,
     required String password,
     required UserRole role,
+    required String location,
+    required String state,
     String? organization,
   }) async {
     _isLoading = true;
@@ -88,7 +90,13 @@ class AuthViewModel extends ChangeNotifier {
 
     try {
       _currentUser = await _authService.register(
-        name: name, email: email, password: password, role: role, organization: organization,
+        name: name,
+        email: email,
+        password: password,
+        role: role,
+        location: location,
+        state: state,
+        organization: organization,
       );
       _isLoading = false;
       notifyListeners();
@@ -187,15 +195,23 @@ class AuthViewModel extends ChangeNotifier {
 
   String _friendlyAuthError(String code) {
     switch (code) {
-      case 'user-not-found': return 'No account found with this email.';
+      case 'user-not-found':
+        return 'No account found with this email.';
       case 'wrong-password':
-      case 'invalid-credential': return 'Incorrect email or password.';
-      case 'email-already-in-use': return 'This email is already registered.';
-      case 'weak-password': return 'Password must be at least 6 characters.';
-      case 'invalid-email': return 'Please enter a valid email address.';
-      case 'too-many-requests': return 'Too many attempts. Please try again later.';
-      case 'network-request-failed': return 'No internet connection.';
-      default: return 'Something went wrong. Please try again.';
+      case 'invalid-credential':
+        return 'Incorrect email or password.';
+      case 'email-already-in-use':
+        return 'This email is already registered.';
+      case 'weak-password':
+        return 'Password must be at least 6 characters.';
+      case 'invalid-email':
+        return 'Please enter a valid email address.';
+      case 'too-many-requests':
+        return 'Too many attempts. Please try again later.';
+      case 'network-request-failed':
+        return 'No internet connection.';
+      default:
+        return 'Something went wrong. Please try again.';
     }
   }
 }

@@ -15,7 +15,8 @@ class OrganizerPublicProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<EventViewModel>();
-    final events = vm.allEvents.where((e) => e.organizerId == organizer.id).toList();
+    final events =
+        vm.allEvents.where((e) => e.organizerId == organizer.id).toList();
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -82,7 +83,11 @@ class OrganizerPublicProfileScreen extends StatelessWidget {
                                   const Icon(Icons.location_on_outlined,
                                       size: 12, color: AppTheme.textLight),
                                   const SizedBox(width: 2),
-                                  Text(organizer.location!,
+                                  Text(
+                                      [organizer.location, organizer.state]
+                                          .whereType<String>()
+                                          .where((value) => value.isNotEmpty)
+                                          .join(', '),
                                       style: const TextStyle(
                                           fontSize: 12,
                                           color: AppTheme.textLight)),

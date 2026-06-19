@@ -261,7 +261,10 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
                         _DetailRow(
                             icon: Icons.location_on_outlined,
                             label: 'Location',
-                            value: _event.location),
+                            value: [_event.location, _event.state]
+                                .whereType<String>()
+                                .where((value) => value.isNotEmpty)
+                                .join(', ')),
                         _DetailRow(
                             icon: Icons.calendar_today_outlined,
                             label: 'Start',

@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../models/event_model.dart';
 import '../models/user_model.dart';
 import '../utils/enum_utils.dart';
+import '../utils/malaysia_states.dart';
 
 class FirebaseEventService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -85,6 +86,10 @@ class FirebaseEventService {
 
   /// Update existing event
   Future<void> updateEvent(EventModel event) async {
+    if (event.location.trim().isEmpty || !isMalaysiaState(event.state)) {
+      throw ArgumentError(
+          'A valid Malaysian event location and state are required.');
+    }
     await _events.doc(event.id).update(event.toMap());
   }
 

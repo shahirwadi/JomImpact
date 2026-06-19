@@ -145,7 +145,11 @@ class EventCard extends StatelessWidget {
                         size: 12, color: AppTheme.textLight),
                     const SizedBox(width: 3),
                     Expanded(
-                        child: Text(event.location,
+                        child: Text(
+                            [event.location, event.state]
+                                .whereType<String>()
+                                .where((value) => value.isNotEmpty)
+                                .join(', '),
                             style: const TextStyle(
                                 fontSize: 11, color: AppTheme.textLight),
                             maxLines: 1,
@@ -353,7 +357,11 @@ class OrganizerCard extends StatelessWidget {
                       const Icon(Icons.location_on_outlined,
                           size: 11, color: AppTheme.textLight),
                       const SizedBox(width: 2),
-                      Text(organizer.location!,
+                      Text(
+                          [organizer.location, organizer.state]
+                              .whereType<String>()
+                              .where((value) => value.isNotEmpty)
+                              .join(', '),
                           style: const TextStyle(
                               fontSize: 11, color: AppTheme.textLight)),
                     ]),

@@ -6,12 +6,14 @@ import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'models/user_model.dart';
 import 'utils/app_theme.dart';
+import 'utils/malaysia_states.dart';
 import 'viewmodels/auth_viewmodel.dart';
 import 'viewmodels/event_viewmodel.dart';
 import 'viewmodels/feed_viewmodel.dart';
 import 'viewmodels/marketplace_viewmodel.dart';
 import 'views/admin/admin_main.dart';
 import 'views/auth/login_screen.dart';
+import 'views/auth/location_setup_screen.dart';
 import 'views/auth/organizer_approval_screen.dart';
 import 'views/organizer/organizer_main.dart';
 import 'views/volunteer/volunteer_main.dart';
@@ -70,6 +72,11 @@ class AppRouter extends StatelessWidget {
       return const OrganizerApprovalScreen();
     }
 
+    if ((user.location?.trim().isEmpty ?? true) ||
+        !isMalaysiaState(user.state)) {
+      return const LocationSetupScreen();
+    }
+
     return user.role == UserRole.organizer
         ? const OrganizerMain()
         : const VolunteerMain();
@@ -88,18 +95,24 @@ class _SplashScreen extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Container(
-              width: 90, height: 90,
+              width: 90,
+              height: 90,
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(Icons.volunteer_activism, color: Colors.white, size: 52),
+              child: const Icon(Icons.volunteer_activism,
+                  color: Colors.white, size: 52),
             ),
             const SizedBox(height: 20),
             const Text('JomImpact',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, color: Colors.white)),
+                style: TextStyle(
+                    fontSize: 32,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white)),
             const SizedBox(height: 32),
-            const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+            const CircularProgressIndicator(
+                color: Colors.white, strokeWidth: 2),
           ],
         ),
       ),

@@ -34,6 +34,7 @@ class EventModel {
   final String title;
   final String description;
   final String location;
+  final String? state;
   final DateTime startDate;
   final DateTime endDate;
   final EventCategory category;
@@ -54,6 +55,7 @@ class EventModel {
     required this.title,
     required this.description,
     required this.location,
+    this.state,
     required this.startDate,
     required this.endDate,
     required this.category,
@@ -75,6 +77,7 @@ class EventModel {
     String? title,
     String? description,
     String? location,
+    String? state,
     DateTime? startDate,
     DateTime? endDate,
     EventCategory? category,
@@ -95,6 +98,7 @@ class EventModel {
       title: title ?? this.title,
       description: description ?? this.description,
       location: location ?? this.location,
+      state: state ?? this.state,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       category: category ?? this.category,
@@ -118,6 +122,7 @@ class EventModel {
       'title': title,
       'description': description,
       'location': location,
+      'state': state,
       'startDate': startDate.toIso8601String(),
       'endDate': endDate.toIso8601String(),
       'category': enumValueName(category),
@@ -141,6 +146,7 @@ class EventModel {
       title: map['title'],
       description: map['description'],
       location: map['location'],
+      state: map['state'],
       startDate: DateTime.parse(map['startDate']),
       endDate: DateTime.parse(map['endDate']),
       category: enumFromName(EventCategory.values, map['category']),

@@ -49,6 +49,14 @@ service cloud.firestore {
       return data.get(field, null) == null || data.get(field, null) is string;
     }
 
+    function isMalaysiaState(state) {
+      return state in [
+        'Johor', 'Kedah', 'Kelantan', 'Melaka', 'Negeri Sembilan',
+        'Pahang', 'Penang', 'Perak', 'Perlis', 'Sabah', 'Sarawak',
+        'Selangor', 'Terengganu', 'Kuala Lumpur', 'Labuan', 'Putrajaya'
+      ];
+    }
+
     // ── Users collection ─────────────────────────────────────────────────────
     match /users/{userId} {
       // Anyone logged in can read any user profile (for organizer browse)
@@ -59,6 +67,9 @@ service cloud.firestore {
         && isOwner(userId)
         && request.resource.data.id == request.auth.uid
         && request.resource.data.role in ['volunteer', 'organizer']
+        && request.resource.data.location is string
+        && request.resource.data.location.size() > 0
+        && isMalaysiaState(request.resource.data.state)
         && (
           (request.resource.data.role == 'volunteer'
             && request.resource.data.organizerApprovalStatus == 'notRequired')
@@ -75,6 +86,9 @@ service cloud.firestore {
         && request.resource.data.role == resource.data.role
         && request.resource.data.organizerApprovalStatus == resource.data.organizerApprovalStatus
         && request.resource.data.approvalNotes == resource.data.approvalNotes
+        && request.resource.data.location is string
+        && request.resource.data.location.size() > 0
+        && isMalaysiaState(request.resource.data.state)
       ) || isAdmin();
 
       // Prevent deletion (soft-delete only)
@@ -88,11 +102,23 @@ service cloud.firestore {
 
       // Only organizers can create events
       allow create: if isApprovedOrganizer()
-        && request.resource.data.organizerId == request.auth.uid;
+        && request.resource.data.organizerId == request.auth.uid
+        && request.resource.data.location is string
+        && request.resource.data.location.size() > 0
+        && isMalaysiaState(request.resource.data.state);
 
       // Only the event's own organizer can update/delete
       allow update: if isApprovedOrganizer()
-        && resource.data.organizerId == request.auth.uid;
+        && resource.data.organizerId == request.auth.uid
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys()
+            .hasAny(['location', 'state']) ||
+          (
+            request.resource.data.location is string
+            && request.resource.data.location.size() > 0
+            && isMalaysiaState(request.resource.data.state)
+          )
+        );
 
       allow delete: if isApprovedOrganizer()
         && resource.data.organizerId == request.auth.uid;
