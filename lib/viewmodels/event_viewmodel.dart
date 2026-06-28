@@ -6,10 +6,13 @@ import 'package:uuid/uuid.dart';
 import '../models/event_model.dart';
 import '../models/user_model.dart';
 import '../services/firebase_event_service.dart';
+import '../services/event_registration_export_service.dart';
 import '../utils/malaysia_states.dart';
 
 class EventViewModel extends ChangeNotifier {
   final FirebaseEventService _service = FirebaseEventService();
+  final EventRegistrationExportService _exportService =
+      EventRegistrationExportService();
   final _uuid = const Uuid();
 
   List<EventModel> _allEvents = [];
@@ -33,6 +36,25 @@ class EventViewModel extends ChangeNotifier {
   String? get error => _error;
   EventCategory? get selectedCategory => _selectedCategory;
   String? get selectedState => _selectedState;
+
+  Future<String> exportApplications({
+    required EventModel event,
+    required List<ApplicationModel> applications,
+    required String filterLabel,
+  }) async {
+    if (applications.isEmpty) {
+      throw StateError('There are no matching applicants to export.');
+    }
+    final volunteers = await _service.getUsersByIds(
+      applications.map((application) => application.volunteerId),
+    );
+    return _exportService.saveCsv(
+      event: event,
+      applications: applications,
+      volunteers: volunteers,
+      filterLabel: filterLabel,
+    );
+  }
 
   List<EventModel> get _filteredEvents {
     var events = List<EventModel>.from(_allEvents);

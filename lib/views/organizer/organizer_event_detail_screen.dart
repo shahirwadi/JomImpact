@@ -732,17 +732,20 @@ class _AttendanceReview extends StatelessWidget {
 class _ApplicationPipelineState extends State<_ApplicationPipeline> {
   ApplicationStatus? _filter;
   String _query = '';
+  bool _isExporting = false;
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<EventViewModel>();
     final reviewerId = context.read<AuthViewModel>().currentUser!.id;
-    final applications = vm.applications.where((app) {
+    final filteredApplications = vm.applications
+        .where((app) => _filter == null || app.status == _filter)
+        .toList();
+    final applications = filteredApplications.where((app) {
       final query = _query.trim().toLowerCase();
-      return (_filter == null || app.status == _filter) &&
-          (query.isEmpty ||
-              app.volunteerName.toLowerCase().contains(query) ||
-              (app.volunteerBio?.toLowerCase().contains(query) ?? false));
+      return query.isEmpty ||
+          app.volunteerName.toLowerCase().contains(query) ||
+          (app.volunteerBio?.toLowerCase().contains(query) ?? false);
     }).toList();
     final canAccept = vm.applications
             .where((app) => app.status == ApplicationStatus.accepted)
@@ -784,6 +787,27 @@ class _ApplicationPipelineState extends State<_ApplicationPipeline> {
           ],
         ),
       ),
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+        child: OutlinedButton.icon(
+          onPressed: filteredApplications.isEmpty || _isExporting
+              ? null
+              : () => _export(context, vm, filteredApplications),
+          icon: _isExporting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.download_outlined),
+          label: Text(
+            'Download ${_activeFilterLabel()} (${filteredApplications.length})',
+          ),
+          style: OutlinedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 42),
+          ),
+        ),
+      ),
       Expanded(
         child: applications.isEmpty
             ? const EmptyState(
@@ -811,6 +835,39 @@ class _ApplicationPipelineState extends State<_ApplicationPipeline> {
       ),
     );
   }
+
+  Future<void> _export(
+    BuildContext context,
+    EventViewModel vm,
+    List<ApplicationModel> applications,
+  ) async {
+    setState(() => _isExporting = true);
+    try {
+      await vm.exportApplications(
+        event: widget.event,
+        applications: applications,
+        filterLabel: _activeFilterLabel(),
+      );
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(
+          '${_activeFilterLabel()} volunteer list downloaded.',
+        ),
+        backgroundColor: AppTheme.success,
+      ));
+    } catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Unable to download volunteer list: $error'),
+        backgroundColor: AppTheme.error,
+      ));
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  String _activeFilterLabel() =>
+      _filter == null ? 'All' : _statusLabel(_filter!);
 
   Widget _applicantCard(BuildContext context, EventViewModel vm,
       ApplicationModel app, String reviewerId, bool canAccept) {
@@ -973,9 +1030,9 @@ class _EventStat extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
+          color: color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           children: [

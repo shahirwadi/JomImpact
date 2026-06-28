@@ -525,4 +525,12 @@ class FirebaseEventService {
     if (!doc.exists) return null;
     return UserModel.fromMap(doc.data()!);
   }
+
+  Future<Map<String, UserModel>> getUsersByIds(Iterable<String> ids) async {
+    final users = await Future.wait(ids.toSet().map(getUserById));
+    return {
+      for (final user in users)
+        if (user != null) user.id: user,
+    };
+  }
 }

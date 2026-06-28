@@ -26,10 +26,8 @@ class FirebaseMarketplaceService {
   }
 
   Stream<List<MarketplaceItemModel>> organizerItemsStream(String organizerId) {
-    return _items
-        .where('organizerId', isEqualTo: organizerId)
-        .snapshots()
-        .map((snap) => _sortNewestFirst(snap.docs
+    return _items.where('organizerId', isEqualTo: organizerId).snapshots().map(
+        (snap) => _sortNewestFirst(snap.docs
             .map((doc) => MarketplaceItemModel.fromMap(doc.data()))
             .toList()));
   }
@@ -44,7 +42,30 @@ class FirebaseMarketplaceService {
             .toList()));
   }
 
-  List<MarketplaceItemModel> _sortNewestFirst(List<MarketplaceItemModel> items) {
+  Stream<List<MarketplacePurchaseModel>> buyerPurchasesStream(String buyerId) {
+    return _purchases.where('buyerId', isEqualTo: buyerId).snapshots().map(
+        (snap) => _sortPurchasesNewestFirst(snap.docs
+            .map((doc) => MarketplacePurchaseModel.fromMap(doc.data()))
+            .toList()));
+  }
+
+  Stream<List<MarketplacePurchaseModel>> organizerPurchasesStream(
+      String organizerId) {
+    return _purchases
+        .where('organizerId', isEqualTo: organizerId)
+        .snapshots()
+        .map((snap) => _sortPurchasesNewestFirst(snap.docs
+            .map((doc) => MarketplacePurchaseModel.fromMap(doc.data()))
+            .toList()));
+  }
+
+  List<MarketplacePurchaseModel> _sortPurchasesNewestFirst(
+      List<MarketplacePurchaseModel> purchases) {
+    return purchases..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  List<MarketplaceItemModel> _sortNewestFirst(
+      List<MarketplaceItemModel> items) {
     return items..sort((a, b) => b.createdAt.compareTo(a.createdAt));
   }
 
@@ -84,10 +105,26 @@ class FirebaseMarketplaceService {
     });
   }
 
-  Future<void> createPurchase({
+  Future<void> updateItemAvailability({
+    required String itemId,
+    required bool isAvailable,
+  }) async {
+    await _items.doc(itemId).update({'isAvailable': isAvailable});
+  }
+
+  Future<MarketplacePurchaseModel> createPurchase({
     required MarketplaceItemModel item,
     required UserModel buyer,
+    required String recipientName,
+    required String phone,
+    required String addressLine1,
+    String? addressLine2,
+    required String city,
+    required String state,
+    required String postcode,
+    String? deliveryInstructions,
   }) async {
+    final now = DateTime.now();
     final purchase = MarketplacePurchaseModel(
       id: _uuid.v4(),
       itemId: item.id,
@@ -95,10 +132,34 @@ class FirebaseMarketplaceService {
       organizerId: item.organizerId,
       buyerId: buyer.id,
       buyerName: buyer.name,
+      buyerEmail: buyer.email,
+      recipientName: recipientName.trim(),
+      phone: phone.trim(),
+      addressLine1: addressLine1.trim(),
+      addressLine2:
+          addressLine2?.trim().isEmpty == true ? null : addressLine2?.trim(),
+      city: city.trim(),
+      state: state.trim(),
+      postcode: postcode.trim(),
+      deliveryInstructions: deliveryInstructions?.trim().isEmpty == true
+          ? null
+          : deliveryInstructions?.trim(),
       price: item.price,
-      createdAt: DateTime.now(),
+      createdAt: now,
+      updatedAt: now,
     );
 
     await _purchases.doc(purchase.id).set(purchase.toMap());
+    return purchase;
+  }
+
+  Future<void> updatePurchaseStatus({
+    required String purchaseId,
+    required MarketplacePurchaseStatus status,
+  }) async {
+    await _purchases.doc(purchaseId).update({
+      'status': enumValueName(status),
+      'updatedAt': DateTime.now().toIso8601String(),
+    });
   }
 }
