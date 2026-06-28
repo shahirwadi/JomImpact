@@ -2,9 +2,29 @@
 
 import '../utils/enum_utils.dart';
 
-enum EventCategory { environment, education, health, community, animals, elderly, children, disaster }
-enum EventStatus { draft, published, ongoing, completed, cancelled }
-enum ApplicationStatus { pending, accepted, rejected }
+enum EventCategory {
+  environment,
+  education,
+  health,
+  community,
+  animals,
+  elderly,
+  children,
+  disaster
+}
+
+enum EventStatus { draft, published, ongoing, completed, finalized, cancelled }
+
+enum AttendanceStatus { pending, attended, partial, noShow, excused }
+
+enum ApplicationStatus {
+  pending,
+  reviewing,
+  accepted,
+  waitlisted,
+  rejected,
+  withdrawn
+}
 
 class EventModel {
   final String id;
@@ -14,6 +34,7 @@ class EventModel {
   final String title;
   final String description;
   final String location;
+  final String? state;
   final DateTime startDate;
   final DateTime endDate;
   final EventCategory category;
@@ -24,6 +45,7 @@ class EventModel {
   final List<String> requirements;
   final List<String> benefits;
   final DateTime createdAt;
+  final DateTime? finalizedAt;
 
   EventModel({
     required this.id,
@@ -33,6 +55,7 @@ class EventModel {
     required this.title,
     required this.description,
     required this.location,
+    this.state,
     required this.startDate,
     required this.endDate,
     required this.category,
@@ -43,6 +66,7 @@ class EventModel {
     this.requirements = const [],
     this.benefits = const [],
     required this.createdAt,
+    this.finalizedAt,
   });
 
   bool get isFull => currentVolunteers >= maxVolunteers;
@@ -53,6 +77,7 @@ class EventModel {
     String? title,
     String? description,
     String? location,
+    String? state,
     DateTime? startDate,
     DateTime? endDate,
     EventCategory? category,
@@ -63,6 +88,7 @@ class EventModel {
     bool clearImageUrl = false,
     List<String>? requirements,
     List<String>? benefits,
+    DateTime? finalizedAt,
   }) {
     return EventModel(
       id: id,
@@ -72,6 +98,7 @@ class EventModel {
       title: title ?? this.title,
       description: description ?? this.description,
       location: location ?? this.location,
+      state: state ?? this.state,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
       category: category ?? this.category,
@@ -82,6 +109,7 @@ class EventModel {
       requirements: requirements ?? this.requirements,
       benefits: benefits ?? this.benefits,
       createdAt: createdAt,
+      finalizedAt: finalizedAt ?? this.finalizedAt,
     );
   }
 
@@ -94,6 +122,7 @@ class EventModel {
       'title': title,
       'description': description,
       'location': location,
+      'state': state,
       'startDate': startDate.toIso8601String(),
       'endDate': endDate.toIso8601String(),
       'category': enumValueName(category),
@@ -104,6 +133,7 @@ class EventModel {
       'requirements': requirements,
       'benefits': benefits,
       'createdAt': createdAt.toIso8601String(),
+      'finalizedAt': finalizedAt?.toIso8601String(),
     };
   }
 
@@ -116,6 +146,7 @@ class EventModel {
       title: map['title'],
       description: map['description'],
       location: map['location'],
+      state: map['state'],
       startDate: DateTime.parse(map['startDate']),
       endDate: DateTime.parse(map['endDate']),
       category: enumFromName(EventCategory.values, map['category']),
@@ -126,6 +157,9 @@ class EventModel {
       requirements: List<String>.from(map['requirements'] ?? []),
       benefits: List<String>.from(map['benefits'] ?? []),
       createdAt: DateTime.parse(map['createdAt']),
+      finalizedAt: map['finalizedAt'] == null
+          ? null
+          : DateTime.parse(map['finalizedAt']),
     );
   }
 }
@@ -140,6 +174,16 @@ class ApplicationModel {
   final String? volunteerBio;
   final ApplicationStatus status;
   final String? message;
+  final String? reviewNotes;
+  final String? reviewedBy;
+  final DateTime? reviewedAt;
+  final DateTime? withdrawnAt;
+  final AttendanceStatus attendanceStatus;
+  final int verifiedHours;
+  final String? attendanceReviewedBy;
+  final DateTime? attendanceReviewedAt;
+  final int impactPoints;
+  final DateTime? pointsAwardedAt;
   final DateTime appliedAt;
 
   ApplicationModel({
@@ -152,10 +196,32 @@ class ApplicationModel {
     this.volunteerBio,
     required this.status,
     this.message,
+    this.reviewNotes,
+    this.reviewedBy,
+    this.reviewedAt,
+    this.withdrawnAt,
+    this.attendanceStatus = AttendanceStatus.pending,
+    this.verifiedHours = 0,
+    this.attendanceReviewedBy,
+    this.attendanceReviewedAt,
+    this.impactPoints = 0,
+    this.pointsAwardedAt,
     required this.appliedAt,
   });
 
-  ApplicationModel copyWith({ApplicationStatus? status}) {
+  ApplicationModel copyWith({
+    ApplicationStatus? status,
+    String? reviewNotes,
+    String? reviewedBy,
+    DateTime? reviewedAt,
+    DateTime? withdrawnAt,
+    AttendanceStatus? attendanceStatus,
+    int? verifiedHours,
+    String? attendanceReviewedBy,
+    DateTime? attendanceReviewedAt,
+    int? impactPoints,
+    DateTime? pointsAwardedAt,
+  }) {
     return ApplicationModel(
       id: id,
       eventId: eventId,
@@ -166,6 +232,16 @@ class ApplicationModel {
       volunteerBio: volunteerBio,
       status: status ?? this.status,
       message: message,
+      reviewNotes: reviewNotes ?? this.reviewNotes,
+      reviewedBy: reviewedBy ?? this.reviewedBy,
+      reviewedAt: reviewedAt ?? this.reviewedAt,
+      withdrawnAt: withdrawnAt ?? this.withdrawnAt,
+      attendanceStatus: attendanceStatus ?? this.attendanceStatus,
+      verifiedHours: verifiedHours ?? this.verifiedHours,
+      attendanceReviewedBy: attendanceReviewedBy ?? this.attendanceReviewedBy,
+      attendanceReviewedAt: attendanceReviewedAt ?? this.attendanceReviewedAt,
+      impactPoints: impactPoints ?? this.impactPoints,
+      pointsAwardedAt: pointsAwardedAt ?? this.pointsAwardedAt,
       appliedAt: appliedAt,
     );
   }
@@ -180,10 +256,20 @@ class ApplicationModel {
         'volunteerBio': volunteerBio,
         'status': enumValueName(status),
         'message': message,
+        'reviewedBy': reviewedBy,
+        'reviewedAt': reviewedAt?.toIso8601String(),
+        'withdrawnAt': withdrawnAt?.toIso8601String(),
+        'attendanceStatus': enumValueName(attendanceStatus),
+        'verifiedHours': verifiedHours,
+        'attendanceReviewedBy': attendanceReviewedBy,
+        'attendanceReviewedAt': attendanceReviewedAt?.toIso8601String(),
+        'impactPoints': impactPoints,
+        'pointsAwardedAt': pointsAwardedAt?.toIso8601String(),
         'appliedAt': appliedAt.toIso8601String(),
       };
 
-  factory ApplicationModel.fromMap(Map<String, dynamic> map) => ApplicationModel(
+  factory ApplicationModel.fromMap(Map<String, dynamic> map) =>
+      ApplicationModel(
         id: map['id'],
         eventId: map['eventId'],
         eventTitle: map['eventTitle'],
@@ -193,6 +279,60 @@ class ApplicationModel {
         volunteerBio: map['volunteerBio'],
         status: enumFromName(ApplicationStatus.values, map['status']),
         message: map['message'],
+        reviewNotes: map['reviewNotes'],
+        reviewedBy: map['reviewedBy'],
+        reviewedAt: map['reviewedAt'] == null
+            ? null
+            : DateTime.parse(map['reviewedAt']),
+        withdrawnAt: map['withdrawnAt'] == null
+            ? null
+            : DateTime.parse(map['withdrawnAt']),
+        attendanceStatus: enumFromName(
+          AttendanceStatus.values,
+          map['attendanceStatus'] ?? 'pending',
+        ),
+        verifiedHours: map['verifiedHours'] ?? 0,
+        attendanceReviewedBy: map['attendanceReviewedBy'],
+        attendanceReviewedAt: map['attendanceReviewedAt'] == null
+            ? null
+            : DateTime.parse(map['attendanceReviewedAt']),
+        impactPoints: map['impactPoints'] ?? 0,
+        pointsAwardedAt: map['pointsAwardedAt'] == null
+            ? null
+            : DateTime.parse(map['pointsAwardedAt']),
         appliedAt: DateTime.parse(map['appliedAt']),
       );
+}
+
+enum ImpactBadge { starter, bronze, silver, gold }
+
+class ImpactSummary {
+  static const int bronzePoints = 250;
+  static const int silverPoints = 750;
+  static const int goldPoints = 1500;
+
+  final int points;
+  final int hours;
+  final int events;
+
+  const ImpactSummary({
+    required this.points,
+    required this.hours,
+    required this.events,
+  });
+
+  ImpactBadge get badge {
+    if (points >= goldPoints) return ImpactBadge.gold;
+    if (points >= silverPoints) return ImpactBadge.silver;
+    if (points >= bronzePoints) return ImpactBadge.bronze;
+    return ImpactBadge.starter;
+  }
+
+  int get nextThreshold {
+    if (points < bronzePoints) return bronzePoints;
+    if (points < silverPoints) return silverPoints;
+    return goldPoints;
+  }
+
+  double get progress => (points / nextThreshold).clamp(0, 1).toDouble();
 }

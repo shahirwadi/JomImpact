@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../models/event_model.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/malaysia_states.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/event_viewmodel.dart';
 import '../shared/widgets.dart';
@@ -60,19 +61,26 @@ class _VolunteerBrowseScreenState extends State<VolunteerBrowseScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text('Hello, ${user.name.split(' ')[0]}! 👋',
-                                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppTheme.textDark)),
+                                  style: const TextStyle(
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppTheme.textDark)),
                               const Text('Find your next volunteer opportunity',
-                                style: TextStyle(fontSize: 13, color: AppTheme.textMedium)),
+                                  style: TextStyle(
+                                      fontSize: 13,
+                                      color: AppTheme.textMedium)),
                             ],
                           ),
                         ),
                         Container(
-                          width: 44, height: 44,
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
                             color: AppTheme.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
-                          child: const Icon(Icons.notifications_outlined, color: AppTheme.primary, size: 22),
+                          child: const Icon(Icons.notifications_outlined,
+                              color: AppTheme.primary, size: 22),
                         ),
                       ],
                     ),
@@ -127,6 +135,26 @@ class _VolunteerBrowseScreenState extends State<VolunteerBrowseScreen> {
                         ),
                       ),
                       const SizedBox(height: 14),
+                      DropdownButtonFormField<String>(
+                        value: vm.selectedState ?? '',
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Filter by state',
+                          prefixIcon: Icon(Icons.map_outlined,
+                              color: AppTheme.textLight),
+                          contentPadding: EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 10),
+                        ),
+                        items: [
+                          const DropdownMenuItem<String>(
+                              value: '', child: Text('All Malaysia')),
+                          ...malaysiaStates.map((state) => DropdownMenuItem(
+                              value: state, child: Text(state))),
+                        ],
+                        onChanged: (value) => vm.setStateFilter(
+                            value?.isEmpty == true ? null : value),
+                      ),
+                      const SizedBox(height: 14),
                       SizedBox(
                         height: 36,
                         child: ListView(
@@ -157,7 +185,6 @@ class _VolunteerBrowseScreenState extends State<VolunteerBrowseScreen> {
                 ),
               ),
             ),
-
             if (vm.isLoading)
               const SliverFillRemaining(
                 child: Center(
@@ -166,7 +193,8 @@ class _VolunteerBrowseScreenState extends State<VolunteerBrowseScreen> {
                   ),
                 ),
               )
-            else if (_selectedTab == _DiscoverTab.events && vm.allEvents.isEmpty)
+            else if (_selectedTab == _DiscoverTab.events &&
+                vm.allEvents.isEmpty)
               SliverFillRemaining(
                 child: EmptyState(
                   icon: Icons.search_off,
@@ -175,6 +203,7 @@ class _VolunteerBrowseScreenState extends State<VolunteerBrowseScreen> {
                   actionLabel: 'Clear Filters',
                   onAction: () {
                     vm.setCategory(null);
+                    vm.setStateFilter(null);
                     vm.setSearchQuery('');
                     _searchCtrl.clear();
                   },
@@ -253,7 +282,12 @@ class _CategoryChip extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
-  const _CategoryChip({required this.label, this.icon, this.color, required this.selected, required this.onTap});
+  const _CategoryChip(
+      {required this.label,
+      this.icon,
+      this.color,
+      required this.selected,
+      required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -277,9 +311,10 @@ class _CategoryChip extends StatelessWidget {
               const SizedBox(width: 4),
             ],
             Text(label,
-              style: TextStyle(
-                fontSize: 12, fontWeight: FontWeight.w600,
-                color: selected ? Colors.white : AppTheme.textMedium)),
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: selected ? Colors.white : AppTheme.textMedium)),
           ],
         ),
       ),

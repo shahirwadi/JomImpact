@@ -45,6 +45,8 @@ class _OrganizerMarketplaceViewState extends State<_OrganizerMarketplaceView> {
   final _descriptionCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
   final _imageUrlCtrl = TextEditingController();
+  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
 
   @override
   void dispose() {
@@ -52,6 +54,7 @@ class _OrganizerMarketplaceViewState extends State<_OrganizerMarketplaceView> {
     _descriptionCtrl.dispose();
     _priceCtrl.dispose();
     _imageUrlCtrl.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -93,6 +96,7 @@ class _OrganizerMarketplaceViewState extends State<_OrganizerMarketplaceView> {
         stream: vm.service.organizerItemsStream(user.id),
         builder: (context, snapshot) {
           final items = snapshot.data ?? [];
+          final filteredItems = _filterMarketplaceItems(items, _searchQuery);
           return ListView(
             padding: const EdgeInsets.all(20),
             children: [
@@ -103,6 +107,16 @@ class _OrganizerMarketplaceViewState extends State<_OrganizerMarketplaceView> {
                 imageUrlCtrl: _imageUrlCtrl,
                 isLoading: vm.isLoading,
                 onSubmit: () => _submit(user),
+              ),
+              const SizedBox(height: 20),
+              _MarketplaceSearchField(
+                controller: _searchCtrl,
+                query: _searchQuery,
+                onChanged: (value) => setState(() => _searchQuery = value),
+                onClear: () {
+                  _searchCtrl.clear();
+                  setState(() => _searchQuery = '');
+                },
               ),
               const SizedBox(height: 20),
               const Text(
@@ -134,8 +148,17 @@ class _OrganizerMarketplaceViewState extends State<_OrganizerMarketplaceView> {
                     message: 'Submit your first item for admin review.',
                   ),
                 )
+              else if (filteredItems.isEmpty)
+                const SizedBox(
+                  height: 220,
+                  child: EmptyState(
+                    icon: Icons.search_off,
+                    title: 'No matching listings',
+                    message: 'Try another title, description, or organizer.',
+                  ),
+                )
               else
-                ...items.map((item) => Padding(
+                ...filteredItems.map((item) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _MarketplaceItemCard(item: item),
                     )),
@@ -147,8 +170,23 @@ class _OrganizerMarketplaceViewState extends State<_OrganizerMarketplaceView> {
   }
 }
 
-class _VolunteerMarketplaceView extends StatelessWidget {
+class _VolunteerMarketplaceView extends StatefulWidget {
   const _VolunteerMarketplaceView();
+
+  @override
+  State<_VolunteerMarketplaceView> createState() =>
+      _VolunteerMarketplaceViewState();
+}
+
+class _VolunteerMarketplaceViewState extends State<_VolunteerMarketplaceView> {
+  final _searchCtrl = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _buy(BuildContext context, MarketplaceItemModel item) async {
     final user = context.read<AuthViewModel>().currentUser!;
@@ -176,6 +214,7 @@ class _VolunteerMarketplaceView extends StatelessWidget {
         stream: vm.service.approvedItemsStream(),
         builder: (context, snapshot) {
           final items = snapshot.data ?? [];
+          final filteredItems = _filterMarketplaceItems(items, _searchQuery);
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
@@ -193,21 +232,90 @@ class _VolunteerMarketplaceView extends StatelessWidget {
               message: 'Approved marketplace items will appear here.',
             );
           }
-          return ListView.separated(
-            padding: const EdgeInsets.all(20),
-            itemCount: items.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final item = items[index];
-              return _MarketplaceItemCard(
-                item: item,
-                actionLabel: 'Buy',
-                isLoading: vm.isLoading,
-                onAction: () => _buy(context, item),
-              );
-            },
+          return Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+                child: _MarketplaceSearchField(
+                  controller: _searchCtrl,
+                  query: _searchQuery,
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  onClear: () {
+                    _searchCtrl.clear();
+                    setState(() => _searchQuery = '');
+                  },
+                ),
+              ),
+              Expanded(
+                child: filteredItems.isEmpty
+                    ? const EmptyState(
+                        icon: Icons.search_off,
+                        title: 'No matching listings',
+                        message:
+                            'Try another title, description, or organizer.',
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+                        itemCount: filteredItems.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 12),
+                        itemBuilder: (context, index) {
+                          final item = filteredItems[index];
+                          return _MarketplaceItemCard(
+                            item: item,
+                            actionLabel: 'Buy',
+                            isLoading: vm.isLoading,
+                            onAction: () => _buy(context, item),
+                          );
+                        },
+                      ),
+              ),
+            ],
           );
         },
+      ),
+    );
+  }
+}
+
+List<MarketplaceItemModel> _filterMarketplaceItems(
+    List<MarketplaceItemModel> items, String rawQuery) {
+  final query = rawQuery.trim().toLowerCase();
+  if (query.isEmpty) return items;
+  return items
+      .where((item) =>
+          item.title.toLowerCase().contains(query) ||
+          item.description.toLowerCase().contains(query) ||
+          item.organizerName.toLowerCase().contains(query))
+      .toList();
+}
+
+class _MarketplaceSearchField extends StatelessWidget {
+  final TextEditingController controller;
+  final String query;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onClear;
+
+  const _MarketplaceSearchField({
+    required this.controller,
+    required this.query,
+    required this.onChanged,
+    required this.onClear,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      onChanged: onChanged,
+      decoration: InputDecoration(
+        hintText: 'Search marketplace',
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: query.isEmpty
+            ? null
+            : IconButton(
+                onPressed: onClear,
+                icon: const Icon(Icons.close),
+              ),
       ),
     );
   }

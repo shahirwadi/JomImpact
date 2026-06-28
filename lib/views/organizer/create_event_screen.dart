@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import '../../models/event_model.dart';
 import '../../services/cloudinary_image_service.dart';
 import '../../utils/app_theme.dart';
+import '../../utils/malaysia_states.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/event_viewmodel.dart';
 import '../shared/widgets.dart';
@@ -32,6 +33,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   final _imageService = CloudinaryImageService();
 
   EventCategory _category = EventCategory.community;
+  String? _selectedState;
   DateTime _startDate = DateTime.now().add(const Duration(days: 7));
   DateTime _endDate = DateTime.now().add(const Duration(days: 7, hours: 4));
   final List<String> _requirements = [];
@@ -48,6 +50,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       _titleCtrl.text = e.title;
       _descCtrl.text = e.description;
       _locationCtrl.text = e.location;
+      _selectedState = e.state;
       _maxVolCtrl.text = e.maxVolunteers.toString();
       _category = e.category;
       _startDate = e.startDate;
@@ -158,6 +161,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         title: _titleCtrl.text.trim(),
         description: _descCtrl.text.trim(),
         location: _locationCtrl.text.trim(),
+        state: _selectedState,
         startDate: _startDate,
         endDate: _endDate,
         category: _category,
@@ -176,12 +180,14 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         title: _titleCtrl.text.trim(),
         description: _descCtrl.text.trim(),
         location: _locationCtrl.text.trim(),
+        state: _selectedState!,
         startDate: _startDate,
         endDate: _endDate,
         category: _category,
         maxVolunteers: int.tryParse(_maxVolCtrl.text) ?? 20,
-        imageUrl:
-            _imageUrlCtrl.text.trim().isEmpty ? null : _imageUrlCtrl.text.trim(),
+        imageUrl: _imageUrlCtrl.text.trim().isEmpty
+            ? null
+            : _imageUrlCtrl.text.trim(),
         requirements: List.from(_requirements),
         benefits: List.from(_benefits),
       );
@@ -241,6 +247,22 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                     prefixIcon: Icon(Icons.location_on_outlined,
                         color: AppTheme.textLight)),
                 validator: (v) => v!.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: _selectedState,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'State / Federal Territory *',
+                  prefixIcon:
+                      Icon(Icons.map_outlined, color: AppTheme.textLight),
+                ),
+                items: malaysiaStates
+                    .map((state) =>
+                        DropdownMenuItem(value: state, child: Text(state)))
+                    .toList(),
+                onChanged: (value) => setState(() => _selectedState = value),
+                validator: (value) => value == null ? 'Required' : null,
               ),
               const SizedBox(height: 20),
               const _SectionLabel('Category'),

@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 import '../models/event_model.dart';
 import '../models/user_model.dart';
 import '../services/firebase_event_service.dart';
+import '../utils/malaysia_states.dart';
 
 class EventViewModel extends ChangeNotifier {
   final FirebaseEventService _service = FirebaseEventService();
@@ -19,6 +20,7 @@ class EventViewModel extends ChangeNotifier {
   String? _error;
   String _searchQuery = '';
   EventCategory? _selectedCategory;
+  String? _selectedState;
 
   // Cache for hasApplied / getApplicationStatus (to avoid extra Firestore reads)
   final Map<String, ApplicationStatus?> _statusCache = {};
@@ -30,19 +32,30 @@ class EventViewModel extends ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
   EventCategory? get selectedCategory => _selectedCategory;
+  String? get selectedState => _selectedState;
 
   List<EventModel> get _filteredEvents {
     var events = List<EventModel>.from(_allEvents);
     if (_searchQuery.isNotEmpty) {
-      events = events.where((e) =>
-        e.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        e.description.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        e.location.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-        e.organizerName.toLowerCase().contains(_searchQuery.toLowerCase())
-      ).toList();
+      events = events
+          .where((e) =>
+              e.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              e.description
+                  .toLowerCase()
+                  .contains(_searchQuery.toLowerCase()) ||
+              e.location.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+              (e.state?.toLowerCase().contains(_searchQuery.toLowerCase()) ??
+                  false) ||
+              e.organizerName
+                  .toLowerCase()
+                  .contains(_searchQuery.toLowerCase()))
+          .toList();
     }
     if (_selectedCategory != null) {
       events = events.where((e) => e.category == _selectedCategory).toList();
+    }
+    if (_selectedState != null) {
+      events = events.where((e) => e.state == _selectedState).toList();
     }
     return events;
   }
@@ -119,6 +132,7 @@ class EventViewModel extends ChangeNotifier {
     required String title,
     required String description,
     required String location,
+    required String state,
     required DateTime startDate,
     required DateTime endDate,
     required EventCategory category,
@@ -134,6 +148,15 @@ class EventViewModel extends ChangeNotifier {
       if (!organizer.isOrganizerApproved) {
         throw Exception('Organizer account is waiting for admin approval.');
       }
+      if ((organizer.location?.trim().isEmpty ?? true) ||
+          !isMalaysiaState(organizer.state)) {
+        throw Exception(
+            'Complete your profile location and state before creating an event.');
+      }
+      if (location.trim().isEmpty || !isMalaysiaState(state)) {
+        throw Exception(
+            'A valid Malaysian event location and state are required.');
+      }
       final event = EventModel(
         id: _uuid.v4(),
         organizerId: organizer.id,
@@ -142,6 +165,7 @@ class EventViewModel extends ChangeNotifier {
         title: title,
         description: description,
         location: location,
+        state: state,
         startDate: startDate,
         endDate: endDate,
         category: category,
@@ -180,6 +204,19 @@ class EventViewModel extends ChangeNotifier {
     } catch (e) {
       _error = e.toString();
       _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> markEventCompleted(String eventId) async {
+    try {
+      await _service.markEventCompleted(eventId);
+      return true;
+    } catch (e) {
+      _error = e.toString().contains('event_not_finished')
+          ? 'The event can only be completed after its end time.'
+          : e.toString();
       notifyListeners();
       return false;
     }
@@ -244,9 +281,19 @@ class EventViewModel extends ChangeNotifier {
 
   // ── Update application status (organizer) ─────────────────────────────────
   Future<bool> updateApplicationStatus(
-      String appId, ApplicationStatus status, String eventId) async {
+    String appId,
+    ApplicationStatus status,
+    String eventId, {
+    required String reviewedBy,
+    String? reviewNotes,
+  }) async {
     try {
-      await _service.updateApplicationStatus(appId, status);
+      await _service.updateApplicationStatus(
+        appId,
+        status,
+        reviewedBy: reviewedBy,
+        reviewNotes: reviewNotes,
+      );
       await loadApplicationsForEvent(eventId);
       _allEvents = await _service.getAllPublishedEvents();
       notifyListeners();
@@ -257,6 +304,60 @@ class EventViewModel extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> withdrawApplication(String appId, String volunteerId) async {
+    try {
+      await _service.withdrawApplication(appId, volunteerId);
+      await loadVolunteerApplications(volunteerId);
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> reviewAttendance({
+    required String appId,
+    required AttendanceStatus attendanceStatus,
+    required int verifiedHours,
+    required String reviewedBy,
+    required String eventId,
+  }) async {
+    try {
+      await _service.reviewAttendance(
+        appId: appId,
+        attendanceStatus: attendanceStatus,
+        verifiedHours: verifiedHours,
+        reviewedBy: reviewedBy,
+      );
+      await loadApplicationsForEvent(eventId);
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> finalizeEvent(String eventId, String organizerId) async {
+    try {
+      await _service.finalizeEvent(eventId, organizerId);
+      await loadApplicationsForEvent(eventId);
+      await loadOrganizerEvents(organizerId);
+      return true;
+    } catch (e) {
+      _error = e.toString().contains('attendance_incomplete')
+          ? 'Review every accepted volunteer before finalizing.'
+          : e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Stream<ImpactSummary> impactSummaryStream(String volunteerId) =>
+      _service.impactSummaryStream(volunteerId);
 
   // ── Status helpers (cached) ───────────────────────────────────────────────
   bool hasApplied(String eventId, String volunteerId) {
@@ -288,6 +389,11 @@ class EventViewModel extends ChangeNotifier {
 
   void setCategory(EventCategory? category) {
     _selectedCategory = category;
+    notifyListeners();
+  }
+
+  void setStateFilter(String? state) {
+    _selectedState = state;
     notifyListeners();
   }
 

@@ -21,14 +21,17 @@ class FeedScreen extends StatefulWidget {
 
 class _FeedScreenState extends State<FeedScreen> {
   final _postCtrl = TextEditingController();
+  final _searchCtrl = TextEditingController();
   final _picker = ImagePicker();
   final _imageService = CloudinaryImageService();
   String? _imageUrl;
   bool _isUploadingImage = false;
+  String _searchQuery = '';
 
   @override
   void dispose() {
     _postCtrl.dispose();
+    _searchCtrl.dispose();
     super.dispose();
   }
 
@@ -100,6 +103,14 @@ class _FeedScreenState extends State<FeedScreen> {
         stream: feedVm.service.postsStream(),
         builder: (context, snapshot) {
           final posts = snapshot.data ?? [];
+          final query = _searchQuery.trim().toLowerCase();
+          final filteredPosts = query.isEmpty
+              ? posts
+              : posts
+                  .where((post) =>
+                      post.content.toLowerCase().contains(query) ||
+                      post.authorName.toLowerCase().contains(query))
+                  .toList();
 
           return RefreshIndicator(
             onRefresh: () async => setState(() {}),
@@ -118,6 +129,24 @@ class _FeedScreenState extends State<FeedScreen> {
                   onPost: () => _publishPost(user),
                 ),
                 const SizedBox(height: 16),
+                TextField(
+                  controller: _searchCtrl,
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  decoration: InputDecoration(
+                    hintText: 'Search posts or authors',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _searchQuery.isEmpty
+                        ? null
+                        : IconButton(
+                            onPressed: () {
+                              _searchCtrl.clear();
+                              setState(() => _searchQuery = '');
+                            },
+                            icon: const Icon(Icons.close),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 if (snapshot.connectionState == ConnectionState.waiting)
                   const Padding(
                     padding: EdgeInsets.only(top: 80),
@@ -129,11 +158,21 @@ class _FeedScreenState extends State<FeedScreen> {
                     child: EmptyState(
                       icon: Icons.forum_outlined,
                       title: 'No posts yet',
-                      message: 'Share an update, milestone, or volunteer story.',
+                      message:
+                          'Share an update, milestone, or volunteer story.',
+                    ),
+                  )
+                else if (filteredPosts.isEmpty)
+                  const SizedBox(
+                    height: 280,
+                    child: EmptyState(
+                      icon: Icons.search_off,
+                      title: 'No matching posts',
+                      message: 'Try another word or author name.',
                     ),
                   )
                 else
-                  ...posts.map((post) => Padding(
+                  ...filteredPosts.map((post) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _FeedPostCard(post: post, currentUser: user),
                       )),

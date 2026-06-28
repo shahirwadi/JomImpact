@@ -39,7 +39,8 @@ class EventCard extends StatelessWidget {
             Container(
               height: compact ? 80 : 110,
               decoration: BoxDecoration(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(16)),
               ),
               child: Stack(
                 children: [
@@ -53,40 +54,55 @@ class EventCard extends StatelessWidget {
                     ),
                   ),
                   Positioned(
-                    top: 10, left: 12,
+                    top: 10,
+                    left: 12,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white.withOpacity(0.3)),
+                        border:
+                            Border.all(color: Colors.white.withOpacity(0.3)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(catIcon, color: Colors.white, size: 12),
                           const SizedBox(width: 4),
-                          Text(catName, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600)),
+                          Text(catName,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600)),
                         ],
                       ),
                     ),
                   ),
                   if (event.isFull)
                     Positioned(
-                      top: 10, right: 12,
+                      top: 10,
+                      right: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.red.shade700,
                           borderRadius: BorderRadius.circular(20),
                         ),
-                        child: const Text('FULL', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700)),
+                        child: const Text('FULL',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700)),
                       ),
                     ),
                   Positioned(
-                    bottom: 10, right: 12,
+                    bottom: 10,
+                    right: 12,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.4),
                         borderRadius: BorderRadius.circular(20),
@@ -94,11 +110,15 @@ class EventCard extends StatelessWidget {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.people, color: Colors.white, size: 12),
+                          const Icon(Icons.people,
+                              color: Colors.white, size: 12),
                           const SizedBox(width: 4),
                           Text(
                             '${event.currentVolunteers}/${event.maxVolunteers}',
-                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600),
                           ),
                         ],
                       ),
@@ -113,22 +133,36 @@ class EventCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(event.title,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textDark),
-                    maxLines: 2, overflow: TextOverflow.ellipsis),
+                      style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textDark),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
                   const SizedBox(height: 6),
                   Row(children: [
-                    const Icon(Icons.location_on_outlined, size: 12, color: AppTheme.textLight),
+                    const Icon(Icons.location_on_outlined,
+                        size: 12, color: AppTheme.textLight),
                     const SizedBox(width: 3),
-                    Expanded(child: Text(event.location,
-                      style: const TextStyle(fontSize: 11, color: AppTheme.textLight),
-                      maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    Expanded(
+                        child: Text(
+                            [event.location, event.state]
+                                .whereType<String>()
+                                .where((value) => value.isNotEmpty)
+                                .join(', '),
+                            style: const TextStyle(
+                                fontSize: 11, color: AppTheme.textLight),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis)),
                   ]),
                   const SizedBox(height: 4),
                   Row(children: [
-                    const Icon(Icons.calendar_today_outlined, size: 12, color: AppTheme.textLight),
+                    const Icon(Icons.calendar_today_outlined,
+                        size: 12, color: AppTheme.textLight),
                     const SizedBox(width: 3),
                     Text(DateFormat('d MMM yyyy').format(event.startDate),
-                      style: const TextStyle(fontSize: 11, color: AppTheme.textLight)),
+                        style: const TextStyle(
+                            fontSize: 11, color: AppTheme.textLight)),
                   ]),
                   if (!compact) ...[
                     const SizedBox(height: 8),
@@ -139,15 +173,20 @@ class EventCard extends StatelessWidget {
                         value: event.fillRate.clamp(0.0, 1.0),
                         backgroundColor: AppTheme.divider,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          event.isFull ? Colors.red.shade600 : catColor),
+                            event.isFull ? Colors.red.shade600 : catColor),
                         minHeight: 5,
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(event.isFull ? 'Fully booked' : '${event.spotsLeft} spots left',
-                      style: TextStyle(
-                        fontSize: 11, fontWeight: FontWeight.w600,
-                        color: event.isFull ? Colors.red.shade600 : catColor)),
+                    Text(
+                        event.isFull
+                            ? 'Fully booked'
+                            : '${event.spotsLeft} spots left',
+                        style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color:
+                                event.isFull ? Colors.red.shade600 : catColor)),
                   ],
                 ],
               ),
@@ -305,23 +344,39 @@ class OrganizerCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(organizer.name,
-                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
+                      style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.textDark)),
                   if (organizer.organization != null)
                     Text(organizer.organization!,
-                      style: const TextStyle(fontSize: 12, color: AppTheme.textMedium)),
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.textMedium)),
                   if (organizer.location != null)
                     Row(children: [
-                      const Icon(Icons.location_on_outlined, size: 11, color: AppTheme.textLight),
+                      const Icon(Icons.location_on_outlined,
+                          size: 11, color: AppTheme.textLight),
                       const SizedBox(width: 2),
-                      Text(organizer.location!, style: const TextStyle(fontSize: 11, color: AppTheme.textLight)),
+                      Text(
+                          [organizer.location, organizer.state]
+                              .whereType<String>()
+                              .where((value) => value.isNotEmpty)
+                              .join(', '),
+                          style: const TextStyle(
+                              fontSize: 11, color: AppTheme.textLight)),
                     ]),
                 ],
               ),
             ),
             Column(
               children: [
-                Text('$eventCount', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.primary)),
-                const Text('events', style: TextStyle(fontSize: 10, color: AppTheme.textLight)),
+                Text('$eventCount',
+                    style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.primary)),
+                const Text('events',
+                    style: TextStyle(fontSize: 10, color: AppTheme.textLight)),
               ],
             ),
             const SizedBox(width: 4),
@@ -339,28 +394,58 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color bg; Color fg; String label; IconData icon;
+    Color bg;
+    Color fg;
+    String label;
+    IconData icon;
     switch (status) {
       case ApplicationStatus.pending:
-        bg = Colors.orange.shade50; fg = Colors.orange.shade700;
-        label = 'Pending'; icon = Icons.schedule;
+        bg = Colors.orange.shade50;
+        fg = Colors.orange.shade700;
+        label = 'New';
+        icon = Icons.fiber_new;
+        break;
+      case ApplicationStatus.reviewing:
+        bg = Colors.blue.shade50;
+        fg = Colors.blue.shade700;
+        label = 'Reviewing';
+        icon = Icons.manage_search;
         break;
       case ApplicationStatus.accepted:
-        bg = Colors.green.shade50; fg = Colors.green.shade700;
-        label = 'Accepted'; icon = Icons.check_circle;
+        bg = Colors.green.shade50;
+        fg = Colors.green.shade700;
+        label = 'Accepted';
+        icon = Icons.check_circle;
         break;
       case ApplicationStatus.rejected:
-        bg = Colors.red.shade50; fg = Colors.red.shade700;
-        label = 'Rejected'; icon = Icons.cancel;
+        bg = Colors.red.shade50;
+        fg = Colors.red.shade700;
+        label = 'Rejected';
+        icon = Icons.cancel;
+        break;
+      case ApplicationStatus.waitlisted:
+        bg = Colors.purple.shade50;
+        fg = Colors.purple.shade700;
+        label = 'Waitlisted';
+        icon = Icons.hourglass_bottom;
+        break;
+      case ApplicationStatus.withdrawn:
+        bg = Colors.grey.shade100;
+        fg = Colors.grey.shade700;
+        label = 'Withdrawn';
+        icon = Icons.undo;
         break;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 12, color: fg),
         const SizedBox(width: 4),
-        Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: fg)),
+        Text(label,
+            style: TextStyle(
+                fontSize: 12, fontWeight: FontWeight.w600, color: fg)),
       ]),
     );
   }
@@ -372,23 +457,48 @@ class EventStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color bg; Color fg; String label;
+    Color bg;
+    Color fg;
+    String label;
     switch (status) {
-      case EventStatus.draft: bg = Colors.grey.shade100; fg = Colors.grey.shade700; label = 'Draft';
+      case EventStatus.draft:
+        bg = Colors.grey.shade100;
+        fg = Colors.grey.shade700;
+        label = 'Draft';
         break;
-      case EventStatus.published: bg = Colors.green.shade50; fg = Colors.green.shade700; label = 'Published';
+      case EventStatus.published:
+        bg = Colors.green.shade50;
+        fg = Colors.green.shade700;
+        label = 'Published';
         break;
-      case EventStatus.ongoing: bg = Colors.blue.shade50; fg = Colors.blue.shade700; label = 'Ongoing';
+      case EventStatus.ongoing:
+        bg = Colors.blue.shade50;
+        fg = Colors.blue.shade700;
+        label = 'Ongoing';
         break;
-      case EventStatus.completed: bg = Colors.purple.shade50; fg = Colors.purple.shade700; label = 'Completed';
+      case EventStatus.completed:
+        bg = Colors.purple.shade50;
+        fg = Colors.purple.shade700;
+        label = 'Completed';
         break;
-      case EventStatus.cancelled: bg = Colors.red.shade50; fg = Colors.red.shade700; label = 'Cancelled';
+      case EventStatus.finalized:
+        bg = Colors.indigo.shade50;
+        fg = Colors.indigo.shade700;
+        label = 'Finalized';
+        break;
+      case EventStatus.cancelled:
+        bg = Colors.red.shade50;
+        fg = Colors.red.shade700;
+        label = 'Cancelled';
         break;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
-      child: Text(label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg)),
+      decoration:
+          BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
+      child: Text(label,
+          style:
+              TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: fg)),
     );
   }
 }
@@ -397,18 +507,27 @@ class SectionHeader extends StatelessWidget {
   final String title;
   final String? action;
   final VoidCallback? onAction;
-  const SectionHeader({super.key, required this.title, this.action, this.onAction});
+  const SectionHeader(
+      {super.key, required this.title, this.action, this.onAction});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
+        Text(title,
+            style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textDark)),
         if (action != null)
           TextButton(
             onPressed: onAction,
-            child: Text(action!, style: const TextStyle(color: AppTheme.primary, fontSize: 13, fontWeight: FontWeight.w600)),
+            child: Text(action!,
+                style: const TextStyle(
+                    color: AppTheme.primary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
           ),
       ],
     );
@@ -418,7 +537,8 @@ class SectionHeader extends StatelessWidget {
 class LoadingOverlay extends StatelessWidget {
   final bool isLoading;
   final Widget child;
-  const LoadingOverlay({super.key, required this.isLoading, required this.child});
+  const LoadingOverlay(
+      {super.key, required this.isLoading, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -427,7 +547,8 @@ class LoadingOverlay extends StatelessWidget {
       if (isLoading)
         Container(
           color: Colors.black.withOpacity(0.3),
-          child: const Center(child: CircularProgressIndicator(color: AppTheme.primaryLight)),
+          child: const Center(
+              child: CircularProgressIndicator(color: AppTheme.primaryLight)),
         ),
     ]);
   }
@@ -439,7 +560,13 @@ class EmptyState extends StatelessWidget {
   final String message;
   final String? actionLabel;
   final VoidCallback? onAction;
-  const EmptyState({super.key, required this.icon, required this.title, required this.message, this.actionLabel, this.onAction});
+  const EmptyState(
+      {super.key,
+      required this.icon,
+      required this.title,
+      required this.message,
+      this.actionLabel,
+      this.onAction});
 
   @override
   Widget build(BuildContext context) {
@@ -451,9 +578,16 @@ class EmptyState extends StatelessWidget {
           children: [
             Icon(icon, size: 64, color: AppTheme.divider),
             const SizedBox(height: 16),
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
+            Text(title,
+                style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.textDark)),
             const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, color: AppTheme.textMedium)),
+            Text(message,
+                textAlign: TextAlign.center,
+                style:
+                    const TextStyle(fontSize: 14, color: AppTheme.textMedium)),
             if (actionLabel != null) ...[
               const SizedBox(height: 20),
               ElevatedButton(onPressed: onAction, child: Text(actionLabel!)),

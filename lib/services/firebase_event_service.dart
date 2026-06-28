@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../models/event_model.dart';
 import '../models/user_model.dart';
 import '../utils/enum_utils.dart';
+import '../utils/malaysia_states.dart';
 
 class FirebaseEventService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -15,6 +16,10 @@ class FirebaseEventService {
       _db.collection('events');
   CollectionReference<Map<String, dynamic>> get _applications =>
       _db.collection('applications');
+  CollectionReference<Map<String, dynamic>> get _applicationReviews =>
+      _db.collection('applicationReviews');
+  CollectionReference<Map<String, dynamic>> get _impactAwards =>
+      _db.collection('impactAwards');
   CollectionReference<Map<String, dynamic>> get _users =>
       _db.collection('users');
 
@@ -81,7 +86,27 @@ class FirebaseEventService {
 
   /// Update existing event
   Future<void> updateEvent(EventModel event) async {
+    if (event.location.trim().isEmpty || !isMalaysiaState(event.state)) {
+      throw ArgumentError(
+          'A valid Malaysian event location and state are required.');
+    }
     await _events.doc(event.id).update(event.toMap());
+  }
+
+  Future<void> markEventCompleted(String eventId) async {
+    await _db.runTransaction((tx) async {
+      final eventRef = _events.doc(eventId);
+      final eventSnap = await tx.get(eventRef);
+      if (!eventSnap.exists) throw Exception('event_not_found');
+      final event = EventModel.fromMap(eventSnap.data()!);
+      if (event.status == EventStatus.finalized) {
+        throw Exception('event_already_finalized');
+      }
+      if (event.endDate.isAfter(DateTime.now())) {
+        throw Exception('event_not_finished');
+      }
+      tx.update(eventRef, {'status': enumValueName(EventStatus.completed)});
+    });
   }
 
   /// Delete event and its applications
@@ -149,6 +174,10 @@ class FirebaseEventService {
       volunteerBio: volunteer.bio,
       status: ApplicationStatus.pending,
       message: message,
+      reviewNotes: null,
+      reviewedBy: null,
+      reviewedAt: null,
+      withdrawnAt: null,
       appliedAt: DateTime.now(),
     );
 
@@ -162,13 +191,12 @@ class FirebaseEventService {
   }
 
   /// Get applications for a specific event (organizer view)
-  Future<List<ApplicationModel>> getApplicationsForEvent(
-      String eventId) async {
+  Future<List<ApplicationModel>> getApplicationsForEvent(String eventId) async {
     final snap = await _applications
         .where('eventId', isEqualTo: eventId)
         .orderBy('appliedAt', descending: true)
         .get();
-    return snap.docs.map((d) => ApplicationModel.fromMap(d.data())).toList();
+    return _withReviewNotes(eventId, snap.docs.map((d) => d.data()).toList());
   }
 
   /// Real-time stream of applications for an event
@@ -177,8 +205,8 @@ class FirebaseEventService {
         .where('eventId', isEqualTo: eventId)
         .orderBy('appliedAt', descending: true)
         .snapshots()
-        .map((snap) =>
-            snap.docs.map((d) => ApplicationModel.fromMap(d.data())).toList());
+        .asyncMap((snap) =>
+            _withReviewNotes(eventId, snap.docs.map((d) => d.data()).toList()));
   }
 
   /// Get all applications submitted by a volunteer
@@ -202,9 +230,14 @@ class FirebaseEventService {
             snap.docs.map((d) => ApplicationModel.fromMap(d.data())).toList());
   }
 
-  /// Accept or reject an application
+  /// Update an application while keeping event capacity in sync.
   Future<void> updateApplicationStatus(
-      String appId, ApplicationStatus status) async {
+    String appId,
+    ApplicationStatus status, {
+    required String reviewedBy,
+    String? reviewNotes,
+  }) async {
+    String? applicationEventId;
     await _db.runTransaction((tx) async {
       final appRef = _applications.doc(appId);
       final appSnap = await tx.get(appRef);
@@ -213,7 +246,11 @@ class FirebaseEventService {
       }
 
       final app = ApplicationModel.fromMap(appSnap.data()!);
+      applicationEventId = app.eventId;
       final currentStatus = app.status;
+      if (currentStatus == ApplicationStatus.withdrawn) {
+        throw Exception('application_withdrawn');
+      }
       final eventRef = _events.doc(app.eventId);
       final eventSnap = await tx.get(eventRef);
       if (!eventSnap.exists) {
@@ -221,6 +258,11 @@ class FirebaseEventService {
       }
 
       final event = EventModel.fromMap(eventSnap.data()!);
+      if (event.status == EventStatus.completed ||
+          event.status == EventStatus.finalized ||
+          event.status == EventStatus.cancelled) {
+        throw Exception('application_review_closed');
+      }
       var volunteerDelta = 0;
 
       if (currentStatus != ApplicationStatus.accepted &&
@@ -234,14 +276,208 @@ class FirebaseEventService {
         volunteerDelta = -1;
       }
 
-      tx.update(appRef, {'status': enumValueName(status)});
-
+      final reviewedAt = DateTime.now().toIso8601String();
+      tx.update(appRef, {
+        'status': enumValueName(status),
+        'reviewedBy': reviewedBy,
+        'reviewedAt': reviewedAt,
+      });
       if (volunteerDelta != 0) {
         tx.update(eventRef, {
           'currentVolunteers': FieldValue.increment(volunteerDelta),
         });
       }
     });
+
+    // Notes are optional metadata. Keep them outside the capacity transaction
+    // so a stale rules deployment cannot roll back the status change.
+    final eventId = applicationEventId;
+    if (eventId == null) return;
+    try {
+      await _applicationReviews.doc(appId).set({
+        'applicationId': appId,
+        'eventId': eventId,
+        'reviewNotes':
+            reviewNotes?.trim().isEmpty == true ? null : reviewNotes?.trim(),
+        'reviewedBy': reviewedBy,
+        'reviewedAt': DateTime.now().toIso8601String(),
+      });
+    } on FirebaseException catch (error) {
+      if (error.code != 'permission-denied') {
+        rethrow;
+      }
+    }
+  }
+
+  Future<void> withdrawApplication(String appId, String volunteerId) async {
+    await _db.runTransaction((tx) async {
+      final appRef = _applications.doc(appId);
+      final appSnap = await tx.get(appRef);
+      if (!appSnap.exists) throw Exception('application_not_found');
+
+      final app = ApplicationModel.fromMap(appSnap.data()!);
+      if (app.volunteerId != volunteerId) {
+        throw Exception('not_application_owner');
+      }
+      if (app.status == ApplicationStatus.withdrawn ||
+          app.status == ApplicationStatus.rejected) {
+        throw Exception('application_closed');
+      }
+
+      final eventRef = _events.doc(app.eventId);
+      final eventSnap = await tx.get(eventRef);
+      if (!eventSnap.exists) throw Exception('event_not_found');
+      final event = EventModel.fromMap(eventSnap.data()!);
+      if (event.status == EventStatus.completed ||
+          event.status == EventStatus.finalized ||
+          event.status == EventStatus.cancelled) {
+        throw Exception('application_withdrawal_closed');
+      }
+      if (app.status == ApplicationStatus.accepted) {
+        tx.update(eventRef, {'currentVolunteers': FieldValue.increment(-1)});
+      }
+      tx.update(appRef, {
+        'status': enumValueName(ApplicationStatus.withdrawn),
+        'withdrawnAt': DateTime.now().toIso8601String(),
+      });
+    });
+  }
+
+  Future<void> reviewAttendance({
+    required String appId,
+    required AttendanceStatus attendanceStatus,
+    required int verifiedHours,
+    required String reviewedBy,
+  }) async {
+    if (verifiedHours < 0 ||
+        ((attendanceStatus == AttendanceStatus.attended ||
+                attendanceStatus == AttendanceStatus.partial) &&
+            verifiedHours == 0) ||
+        ((attendanceStatus == AttendanceStatus.noShow ||
+                attendanceStatus == AttendanceStatus.excused) &&
+            verifiedHours != 0)) {
+      throw Exception('invalid_attendance_hours');
+    }
+
+    await _db.runTransaction((tx) async {
+      final appRef = _applications.doc(appId);
+      final appSnap = await tx.get(appRef);
+      if (!appSnap.exists) throw Exception('application_not_found');
+      final app = ApplicationModel.fromMap(appSnap.data()!);
+      if (app.status != ApplicationStatus.accepted) {
+        throw Exception('application_not_accepted');
+      }
+
+      final eventSnap = await tx.get(_events.doc(app.eventId));
+      if (!eventSnap.exists) throw Exception('event_not_found');
+      final event = EventModel.fromMap(eventSnap.data()!);
+      if (event.status != EventStatus.completed) {
+        throw Exception('event_not_completed');
+      }
+
+      tx.update(appRef, {
+        'attendanceStatus': enumValueName(attendanceStatus),
+        'verifiedHours': verifiedHours,
+        'attendanceReviewedBy': reviewedBy,
+        'attendanceReviewedAt': DateTime.now().toIso8601String(),
+      });
+    });
+  }
+
+  Future<void> finalizeEvent(String eventId, String organizerId) async {
+    final accepted = await _applications
+        .where('eventId', isEqualTo: eventId)
+        .where('status', isEqualTo: enumValueName(ApplicationStatus.accepted))
+        .get();
+
+    await _db.runTransaction((tx) async {
+      final eventRef = _events.doc(eventId);
+      final eventSnap = await tx.get(eventRef);
+      if (!eventSnap.exists) throw Exception('event_not_found');
+      final event = EventModel.fromMap(eventSnap.data()!);
+      if (event.organizerId != organizerId) throw Exception('not_event_owner');
+      if (event.status == EventStatus.finalized) return;
+      if (event.status != EventStatus.completed) {
+        throw Exception('event_not_completed');
+      }
+
+      final applications = <ApplicationModel>[];
+      for (final doc in accepted.docs) {
+        final current = await tx.get(doc.reference);
+        if (!current.exists) continue;
+        final app = ApplicationModel.fromMap(current.data()!);
+        if (app.status == ApplicationStatus.accepted) applications.add(app);
+      }
+      if (applications
+          .any((app) => app.attendanceStatus == AttendanceStatus.pending)) {
+        throw Exception('attendance_incomplete');
+      }
+
+      final awardedAt = DateTime.now().toIso8601String();
+      for (final app in applications) {
+        final earnsPoints = app.attendanceStatus == AttendanceStatus.attended ||
+            app.attendanceStatus == AttendanceStatus.partial;
+        final points = earnsPoints ? app.verifiedHours * 10 : 0;
+        tx.update(_applications.doc(app.id), {
+          'impactPoints': points,
+          'pointsAwardedAt': awardedAt,
+        });
+        if (points > 0) {
+          tx.set(_impactAwards.doc('${eventId}_${app.volunteerId}'), {
+            'eventId': eventId,
+            'eventTitle': event.title,
+            'applicationId': app.id,
+            'volunteerId': app.volunteerId,
+            'hours': app.verifiedHours,
+            'points': points,
+            'awardedAt': awardedAt,
+            'awardedBy': organizerId,
+          });
+        }
+      }
+      tx.update(eventRef, {
+        'status': enumValueName(EventStatus.finalized),
+        'finalizedAt': awardedAt,
+      });
+    });
+  }
+
+  Stream<ImpactSummary> impactSummaryStream(String volunteerId) {
+    return _impactAwards
+        .where('volunteerId', isEqualTo: volunteerId)
+        .snapshots()
+        .map((snapshot) {
+      var points = 0;
+      var hours = 0;
+      for (final doc in snapshot.docs) {
+        points += (doc.data()['points'] as num? ?? 0).toInt();
+        hours += (doc.data()['hours'] as num? ?? 0).toInt();
+      }
+      return ImpactSummary(
+          points: points, hours: hours, events: snapshot.docs.length);
+    });
+  }
+
+  Future<List<ApplicationModel>> _withReviewNotes(
+      String eventId, List<Map<String, dynamic>> applications) async {
+    try {
+      final reviewSnapshot =
+          await _applicationReviews.where('eventId', isEqualTo: eventId).get();
+      final notesByApplication = {
+        for (final review in reviewSnapshot.docs)
+          review.data()['applicationId']: review.data()['reviewNotes'],
+      };
+      return applications.map((data) {
+        final merged = Map<String, dynamic>.from(data);
+        merged['reviewNotes'] = notesByApplication[data['id']];
+        return ApplicationModel.fromMap(merged);
+      }).toList();
+    } on FirebaseException catch (error) {
+      if (error.code != 'permission-denied') {
+        rethrow;
+      }
+      return applications.map(ApplicationModel.fromMap).toList();
+    }
   }
 
   /// Check if a volunteer has applied for an event

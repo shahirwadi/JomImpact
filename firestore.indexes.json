@@ -41,6 +41,14 @@
       ]
     },
     {
+      "collectionGroup": "applications",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "eventId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "marketplaceItems",
       "queryScope": "COLLECTION",
       "fields": [
