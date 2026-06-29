@@ -18,7 +18,8 @@ class VolunteerMain extends StatefulWidget {
 }
 
 class _VolunteerMainState extends State<VolunteerMain> {
-  int _index = 0;
+  // Discover is the volunteer's primary landing page after authentication.
+  int _index = 2;
 
   final _screens = const [
     MarketplaceScreen(),

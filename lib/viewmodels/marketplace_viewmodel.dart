@@ -82,15 +82,86 @@ class MarketplaceViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> buyItem({
-    required MarketplaceItemModel item,
-    required UserModel buyer,
+  Future<bool> updateItemAvailability({
+    required String itemId,
+    required bool isAvailable,
   }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
     try {
-      await _service.createPurchase(item: item, buyer: buyer);
+      await _service.updateItemAvailability(
+        itemId: itemId,
+        isAvailable: isAvailable,
+      );
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<MarketplacePurchaseModel?> placeOrder({
+    required MarketplaceItemModel item,
+    required UserModel buyer,
+    required String recipientName,
+    required String phone,
+    required String addressLine1,
+    String? addressLine2,
+    required String city,
+    required String state,
+    required String postcode,
+    String? deliveryInstructions,
+  }) async {
+    if ([recipientName, phone, addressLine1, city, state, postcode]
+        .any((value) => value.trim().isEmpty)) {
+      _error = 'Complete all required postage details.';
+      notifyListeners();
+      return null;
+    }
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      final purchase = await _service.createPurchase(
+        item: item,
+        buyer: buyer,
+        recipientName: recipientName,
+        phone: phone,
+        addressLine1: addressLine1,
+        addressLine2: addressLine2,
+        city: city,
+        state: state,
+        postcode: postcode,
+        deliveryInstructions: deliveryInstructions,
+      );
+      _isLoading = false;
+      notifyListeners();
+      return purchase;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return null;
+    }
+  }
+
+  Future<bool> updateOrderStatus({
+    required String purchaseId,
+    required MarketplacePurchaseStatus status,
+  }) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await _service.updatePurchaseStatus(
+        purchaseId: purchaseId,
+        status: status,
+      );
       _isLoading = false;
       notifyListeners();
       return true;

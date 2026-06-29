@@ -45,6 +45,10 @@ service cloud.firestore {
       return status in ['pending', 'approved', 'rejected'];
     }
 
+    function isMarketplaceOrderStatus(status) {
+      return status in ['confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
+    }
+
     function hasOptionalString(data, field) {
       return data.get(field, null) == null || data.get(field, null) is string;
     }
@@ -290,6 +294,7 @@ service cloud.firestore {
           'description',
           'price',
           'imageUrl',
+          'isAvailable',
           'status',
           'adminNotes',
           'reviewedBy',
@@ -309,19 +314,29 @@ service cloud.firestore {
         && request.resource.data.price is number
         && request.resource.data.price > 0
         && hasOptionalString(request.resource.data, 'imageUrl')
+        && request.resource.data.isAvailable == true
         && request.resource.data.status == 'pending'
         && request.resource.data.adminNotes == null
         && request.resource.data.reviewedBy == null
         && request.resource.data.reviewedAt == null
         && request.resource.data.createdAt is string;
 
-      allow update: if isAdmin()
-        && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['status', 'adminNotes', 'reviewedBy', 'reviewedAt'])
-        && isMarketplaceStatus(request.resource.data.status)
-        && hasOptionalString(request.resource.data, 'adminNotes')
-        && request.resource.data.reviewedBy == request.auth.uid
-        && request.resource.data.reviewedAt is string;
+      allow update: if (
+        isAdmin()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['status', 'adminNotes', 'reviewedBy', 'reviewedAt'])
+          && isMarketplaceStatus(request.resource.data.status)
+          && hasOptionalString(request.resource.data, 'adminNotes')
+          && request.resource.data.reviewedBy == request.auth.uid
+          && request.resource.data.reviewedAt is string
+      ) || (
+        isApprovedOrganizer()
+          && resource.data.organizerId == request.auth.uid
+          && resource.data.status == 'approved'
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['isAvailable'])
+          && request.resource.data.isAvailable is bool
+      );
 
       allow delete: if false;
     }
@@ -379,9 +394,21 @@ service cloud.firestore {
           'organizerId',
           'buyerId',
           'buyerName',
+          'buyerEmail',
+          'recipientName',
+          'phone',
+          'addressLine1',
+          'addressLine2',
+          'city',
+          'state',
+          'postcode',
+          'country',
+          'deliveryInstructions',
           'price',
           'status',
-          'createdAt'
+          'paymentStatus',
+          'createdAt',
+          'updatedAt'
         ])
         && request.resource.data.id == purchaseId
         && request.resource.data.buyerId == request.auth.uid
@@ -391,16 +418,42 @@ service cloud.firestore {
         && request.resource.data.organizerId is string
         && request.resource.data.buyerName is string
         && request.resource.data.buyerName.size() > 0
+        && request.resource.data.buyerEmail is string
+        && request.resource.data.recipientName is string
+        && request.resource.data.recipientName.size() > 0
+        && request.resource.data.phone is string
+        && request.resource.data.phone.size() > 0
+        && request.resource.data.addressLine1 is string
+        && request.resource.data.addressLine1.size() > 0
+        && hasOptionalString(request.resource.data, 'addressLine2')
+        && request.resource.data.city is string
+        && request.resource.data.city.size() > 0
+        && request.resource.data.state is string
+        && request.resource.data.state.size() > 0
+        && request.resource.data.postcode is string
+        && request.resource.data.postcode.size() > 0
+        && request.resource.data.country == 'Malaysia'
+        && hasOptionalString(request.resource.data, 'deliveryInstructions')
         && request.resource.data.price is number
         && request.resource.data.price > 0
-        && request.resource.data.status == 'pendingPayment'
+        && request.resource.data.status == 'confirmed'
+        && request.resource.data.paymentStatus == 'notCollected'
         && request.resource.data.createdAt is string
+        && request.resource.data.updatedAt == request.resource.data.createdAt
         && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.status == 'approved'
+        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.get('isAvailable', true) == true
         && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.title == request.resource.data.itemTitle
         && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.organizerId == request.resource.data.organizerId
         && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.price == request.resource.data.price;
 
-      allow update, delete: if false;
+      allow update: if isApprovedOrganizer()
+        && resource.data.organizerId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'updatedAt'])
+        && isMarketplaceOrderStatus(request.resource.data.status)
+        && request.resource.data.updatedAt is string;
+
+      allow delete: if false;
     }
   }
 }
