@@ -22,6 +22,7 @@ class VolunteerBrowseScreen extends StatefulWidget {
 class _VolunteerBrowseScreenState extends State<VolunteerBrowseScreen> {
   final _searchCtrl = TextEditingController();
   _DiscoverTab _selectedTab = _DiscoverTab.events;
+  bool _filtersExpanded = false;
 
   @override
   void initState() {
@@ -42,6 +43,11 @@ class _VolunteerBrowseScreenState extends State<VolunteerBrowseScreen> {
     final vm = context.watch<EventViewModel>();
     final authVm = context.watch<AuthViewModel>();
     final user = authVm.currentUser!;
+    final hasActiveFilters = _searchCtrl.text.isNotEmpty ||
+        vm.selectedState != null ||
+        vm.selectedCategory != null;
+    final selectedFilterCount = (vm.selectedState != null ? 1 : 0) +
+        (vm.selectedCategory != null ? 1 : 0);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -76,7 +82,7 @@ class _VolunteerBrowseScreenState extends State<VolunteerBrowseScreen> {
                           width: 44,
                           height: 44,
                           decoration: BoxDecoration(
-                            color: AppTheme.primary.withOpacity(0.1),
+                            color: AppTheme.primary.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(Icons.notifications_outlined,
@@ -107,74 +113,242 @@ class _VolunteerBrowseScreenState extends State<VolunteerBrowseScreen> {
                       ),
                     ),
                     if (_selectedTab == _DiscoverTab.events) ...[
-                      const SizedBox(height: 14),
-                      TextField(
-                        controller: _searchCtrl,
-                        onChanged: vm.setSearchQuery,
-                        decoration: InputDecoration(
-                          hintText: 'Search events, locations...',
-                          prefixIcon: const Icon(
-                            Icons.search,
-                            color: AppTheme.textLight,
-                          ),
-                          suffixIcon: _searchCtrl.text.isNotEmpty
-                              ? IconButton(
-                                  onPressed: () {
-                                    _searchCtrl.clear();
-                                    vm.setSearchQuery('');
-                                  },
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: AppTheme.textLight,
-                                    size: 18,
-                                  ),
-                                )
-                              : null,
-                          contentPadding:
-                              const EdgeInsets.symmetric(vertical: 12),
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppTheme.divider),
                         ),
-                      ),
-                      const SizedBox(height: 14),
-                      DropdownButtonFormField<String>(
-                        value: vm.selectedState ?? '',
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Filter by state',
-                          prefixIcon: Icon(Icons.map_outlined,
-                              color: AppTheme.textLight),
-                          contentPadding: EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                        ),
-                        items: [
-                          const DropdownMenuItem<String>(
-                              value: '', child: Text('All Malaysia')),
-                          ...malaysiaStates.map((state) => DropdownMenuItem(
-                              value: state, child: Text(state))),
-                        ],
-                        onChanged: (value) => vm.setStateFilter(
-                            value?.isEmpty == true ? null : value),
-                      ),
-                      const SizedBox(height: 14),
-                      SizedBox(
-                        height: 36,
-                        child: ListView(
-                          scrollDirection: Axis.horizontal,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _CategoryChip(
-                              label: 'All',
-                              selected: vm.selectedCategory == null,
-                              onTap: () => vm.setCategory(null),
+                            const Text(
+                              'Find opportunities',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.textDark,
+                              ),
                             ),
-                            ...EventCategory.values.map(
-                              (cat) => _CategoryChip(
-                                label: CategoryHelper.getName(cat),
-                                icon: CategoryHelper.getIcon(cat),
-                                color: CategoryHelper.getColor(cat),
-                                selected: vm.selectedCategory == cat,
-                                onTap: () => vm.setCategory(
-                                  vm.selectedCategory == cat ? null : cat,
+                            const SizedBox(height: 10),
+                            TextField(
+                              controller: _searchCtrl,
+                              onChanged: vm.setSearchQuery,
+                              decoration: InputDecoration(
+                                hintText: 'Search events or locations',
+                                prefixIcon: const Icon(
+                                  Icons.search,
+                                  color: AppTheme.textLight,
+                                ),
+                                suffixIcon: _searchCtrl.text.isNotEmpty
+                                    ? IconButton(
+                                        tooltip: 'Clear search',
+                                        onPressed: () {
+                                          _searchCtrl.clear();
+                                          vm.setSearchQuery('');
+                                        },
+                                        icon: const Icon(
+                                          Icons.close,
+                                          color: AppTheme.textLight,
+                                          size: 18,
+                                        ),
+                                      )
+                                    : null,
+                                contentPadding:
+                                    const EdgeInsets.symmetric(vertical: 12),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Material(
+                              color: AppTheme.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              child: InkWell(
+                                onTap: () => setState(
+                                  () => _filtersExpanded = !_filtersExpanded,
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: AppTheme.divider),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.tune,
+                                        size: 18,
+                                        color: AppTheme.primary,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        selectedFilterCount == 0
+                                            ? 'Filters'
+                                            : 'Filters ($selectedFilterCount)',
+                                        style: const TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppTheme.textDark,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      Text(
+                                        _filtersExpanded ? 'Hide' : 'Show',
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.primary,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      Icon(
+                                        _filtersExpanded
+                                            ? Icons.keyboard_arrow_up
+                                            : Icons.keyboard_arrow_down,
+                                        size: 20,
+                                        color: AppTheme.primary,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
+                            ),
+                            AnimatedSize(
+                              duration: const Duration(milliseconds: 180),
+                              curve: Curves.easeOut,
+                              child: _filtersExpanded
+                                  ? Padding(
+                                      padding: const EdgeInsets.only(top: 12),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              const Text(
+                                                'Refine results',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppTheme.textMedium,
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                              if (hasActiveFilters)
+                                                TextButton(
+                                                  onPressed: () {
+                                                    _searchCtrl.clear();
+                                                    vm.setSearchQuery('');
+                                                    vm.setStateFilter(null);
+                                                    vm.setCategory(null);
+                                                  },
+                                                  style: TextButton.styleFrom(
+                                                    minimumSize: Size.zero,
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 4,
+                                                    ),
+                                                    tapTargetSize:
+                                                        MaterialTapTargetSize
+                                                            .shrinkWrap,
+                                                  ),
+                                                  child: const Text('Reset'),
+                                                ),
+                                            ],
+                                          ),
+                                          const SizedBox(height: 8),
+                                          DropdownButtonFormField<String>(
+                                            value: vm.selectedState ?? '',
+                                            isExpanded: true,
+                                            decoration: const InputDecoration(
+                                              prefixIcon: Icon(
+                                                Icons.location_on_outlined,
+                                                color: AppTheme.textLight,
+                                                size: 20,
+                                              ),
+                                              contentPadding:
+                                                  EdgeInsets.symmetric(
+                                                horizontal: 12,
+                                                vertical: 10,
+                                              ),
+                                            ),
+                                            items: [
+                                              const DropdownMenuItem<String>(
+                                                value: '',
+                                                child: Text(
+                                                    'Anywhere in Malaysia'),
+                                              ),
+                                              ...malaysiaStates.map(
+                                                (state) => DropdownMenuItem(
+                                                  value: state,
+                                                  child: Text(state),
+                                                ),
+                                              ),
+                                            ],
+                                            onChanged: (value) =>
+                                                vm.setStateFilter(
+                                              value?.isEmpty == true
+                                                  ? null
+                                                  : value,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 12),
+                                          const Text(
+                                            'Category',
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w600,
+                                              color: AppTheme.textMedium,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          SizedBox(
+                                            height: 36,
+                                            child: ListView(
+                                              scrollDirection: Axis.horizontal,
+                                              children: [
+                                                _CategoryChip(
+                                                  label: 'All',
+                                                  selected:
+                                                      vm.selectedCategory ==
+                                                          null,
+                                                  onTap: () =>
+                                                      vm.setCategory(null),
+                                                ),
+                                                ...EventCategory.values.map(
+                                                  (cat) => _CategoryChip(
+                                                    label:
+                                                        CategoryHelper.getName(
+                                                            cat),
+                                                    icon:
+                                                        CategoryHelper.getIcon(
+                                                            cat),
+                                                    color:
+                                                        CategoryHelper.getColor(
+                                                            cat),
+                                                    selected:
+                                                        vm.selectedCategory ==
+                                                            cat,
+                                                    onTap: () => vm.setCategory(
+                                                      vm.selectedCategory == cat
+                                                          ? null
+                                                          : cat,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : const SizedBox.shrink(),
                             ),
                           ],
                         ),
