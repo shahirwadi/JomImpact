@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 import '../models/marketplace_model.dart';
 import '../models/user_model.dart';
 import '../services/firebase_marketplace_service.dart';
+import '../services/stripe_payment_service.dart';
 
 class MarketplaceViewModel extends ChangeNotifier {
   final FirebaseMarketplaceService _service = FirebaseMarketplaceService();
+  final StripePaymentService _stripe = StripePaymentService();
 
   bool _isLoading = false;
   String? _error;
@@ -151,7 +153,7 @@ class MarketplaceViewModel extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final purchase = await _service.createPurchase(
+      final purchase = await _stripe.payForItem(
         item: item,
         buyer: buyer,
         recipientName: recipientName,

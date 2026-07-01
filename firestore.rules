@@ -348,17 +348,6 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['isAvailable'])
           && request.resource.data.isAvailable is bool
-      ) || (
-        isVolunteer()
-          && resource.data.status == 'approved'
-          && resource.data.get('isAvailable', true) == true
-          && resource.data.get('quantity', 1) > 0
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['quantity', 'isAvailable'])
-          && request.resource.data.quantity
-            == resource.data.get('quantity', 1) - 1
-          && request.resource.data.isAvailable
-            == (request.resource.data.quantity > 0)
       );
 
       allow delete: if isApprovedOrganizer()
@@ -410,66 +399,9 @@ service cloud.firestore {
         resource.data.organizerId == request.auth.uid
       );
 
-      allow create: if isVolunteer()
-        && request.resource.data.keys().hasOnly([
-          'id',
-          'itemId',
-          'itemTitle',
-          'organizerId',
-          'buyerId',
-          'buyerName',
-          'buyerEmail',
-          'recipientName',
-          'phone',
-          'addressLine1',
-          'addressLine2',
-          'city',
-          'state',
-          'postcode',
-          'country',
-          'deliveryInstructions',
-          'price',
-          'status',
-          'paymentStatus',
-          'createdAt',
-          'updatedAt'
-        ])
-        && request.resource.data.id == purchaseId
-        && request.resource.data.buyerId == request.auth.uid
-        && request.resource.data.itemId is string
-        && request.resource.data.itemTitle is string
-        && request.resource.data.itemTitle.size() > 0
-        && request.resource.data.organizerId is string
-        && request.resource.data.buyerName is string
-        && request.resource.data.buyerName.size() > 0
-        && request.resource.data.buyerEmail is string
-        && request.resource.data.recipientName is string
-        && request.resource.data.recipientName.size() > 0
-        && request.resource.data.phone is string
-        && request.resource.data.phone.size() > 0
-        && request.resource.data.addressLine1 is string
-        && request.resource.data.addressLine1.size() > 0
-        && hasOptionalString(request.resource.data, 'addressLine2')
-        && request.resource.data.city is string
-        && request.resource.data.city.size() > 0
-        && request.resource.data.state is string
-        && request.resource.data.state.size() > 0
-        && request.resource.data.postcode is string
-        && request.resource.data.postcode.size() > 0
-        && request.resource.data.country == 'Malaysia'
-        && hasOptionalString(request.resource.data, 'deliveryInstructions')
-        && request.resource.data.price is number
-        && request.resource.data.price > 0
-        && request.resource.data.status == 'confirmed'
-        && request.resource.data.paymentStatus == 'notCollected'
-        && request.resource.data.createdAt is string
-        && request.resource.data.updatedAt == request.resource.data.createdAt
-        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.status == 'approved'
-        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.get('isAvailable', true) == true
-        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.get('quantity', 1) > 0
-        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.title == request.resource.data.itemTitle
-        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.organizerId == request.resource.data.organizerId
-        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.price == request.resource.data.price;
+      // Stripe-verified orders are created only by the Admin SDK in Cloud
+      // Functions, which bypasses client security rules.
+      allow create: if false;
 
       allow update: if isApprovedOrganizer()
         && resource.data.organizerId == request.auth.uid

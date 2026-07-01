@@ -2,8 +2,10 @@
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
+import 'config/app_env.dart';
 import 'models/user_model.dart';
 import 'utils/app_theme.dart';
 import 'utils/malaysia_states.dart';
@@ -23,6 +25,10 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  if (AppEnv.isStripeConfigured) {
+    Stripe.publishableKey = AppEnv.stripePublishableKey;
+    await Stripe.instance.applySettings();
+  }
   runApp(const JomImpactApp());
 }
 

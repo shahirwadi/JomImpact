@@ -423,7 +423,7 @@ class _MarketplaceCheckoutScreenState extends State<MarketplaceCheckoutScreen> {
     final loading = context.watch<MarketplaceViewModel>().isLoading;
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(title: const Text('Postage details')),
+      appBar: AppBar(title: const Text('Secure checkout')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -523,8 +523,12 @@ class _MarketplaceCheckoutScreenState extends State<MarketplaceCheckoutScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.check_circle_outline),
-              label: Text(loading ? 'Placing order…' : 'Confirm order'),
+                  : const Icon(Icons.lock_outline),
+              label: Text(
+                loading
+                    ? 'Opening Stripe…'
+                    : 'Pay RM ${widget.item.price.toStringAsFixed(2)}',
+              ),
             ),
           ],
         ),
@@ -607,7 +611,12 @@ class MarketplaceOrderDetailScreen extends StatelessWidget {
             ),
             ('Total', 'RM ${order.price.toStringAsFixed(2)}'),
             ('Status', _orderStatusLabel(order.status)),
-            ('Payment', 'Not collected'),
+            (
+              'Payment',
+              order.paymentStatus == MarketplacePaymentStatus.paid
+                  ? 'Paid with Stripe'
+                  : 'Not collected'
+            ),
           ]),
           const SizedBox(height: 14),
           _DetailCard(title: 'Postage details', rows: [
@@ -619,7 +628,8 @@ class MarketplaceOrderDetailScreen extends StatelessWidget {
               ('Instructions', order.deliveryInstructions!),
           ]),
           const SizedBox(height: 14),
-          const _PaymentNotice(),
+          if (order.paymentStatus != MarketplacePaymentStatus.paid)
+            const _PaymentNotice(),
           if (isOrganizer) ...[
             const SizedBox(height: 20),
             const _SectionTitle('Update order status'),
@@ -1125,11 +1135,11 @@ class _PaymentNotice extends StatelessWidget {
         border: Border.all(color: AppTheme.secondary.withValues(alpha: 0.25)),
       ),
       child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(Icons.info_outline, color: AppTheme.secondary, size: 21),
+        Icon(Icons.lock_outline, color: AppTheme.secondary, size: 21),
         SizedBox(width: 10),
         Expanded(
           child: Text(
-            'Online payment is not collected yet. Stripe payment will be added later.',
+            'Secure test payment powered by Stripe. Your card details are handled directly by Stripe.',
             style: TextStyle(
                 fontSize: 12, height: 1.4, color: AppTheme.textMedium),
           ),
