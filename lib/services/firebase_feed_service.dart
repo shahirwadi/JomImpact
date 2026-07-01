@@ -71,10 +71,7 @@ class FirebaseFeedService {
       createdAt: DateTime.now(),
     );
 
-    await _posts.doc(post.id).set({
-      ...post.toMap(),
-      'createdAtTime': FieldValue.serverTimestamp(),
-    });
+    await _posts.doc(post.id).set(post.toMap());
   }
 
   Future<void> addComment({
