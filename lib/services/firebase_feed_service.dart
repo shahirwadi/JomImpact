@@ -15,10 +15,8 @@ class FirebaseFeedService {
       _db.collection('users');
 
   Stream<List<FeedPostModel>> postsStream() {
-    return _posts
-        .orderBy('createdAt', descending: true)
-        .snapshots()
-        .map((snap) =>
+    return _posts.orderBy('createdAt', descending: true).snapshots().map(
+        (snap) =>
             snap.docs.map((doc) => FeedPostModel.fromMap(doc.data())).toList());
   }
 
@@ -40,6 +38,14 @@ class FirebaseFeedService {
         .map((snap) => snap.docs
             .map((doc) => FeedCommentModel.fromMap(doc.data()))
             .toList());
+  }
+
+  Stream<int> commentCountStream(String postId) {
+    return _posts
+        .doc(postId)
+        .collection('comments')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
   }
 
   Stream<UserModel?> userStream(String userId) {
@@ -87,12 +93,9 @@ class FirebaseFeedService {
       createdAt: DateTime.now(),
     );
 
-    final postRef = _posts.doc(postId);
-    final commentRef = postRef.collection('comments').doc(comment.id);
-    final batch = _db.batch();
-    batch.set(commentRef, comment.toMap());
-    batch.update(postRef, {'commentCount': FieldValue.increment(1)});
-    await batch.commit();
+    final commentRef =
+        _posts.doc(postId).collection('comments').doc(comment.id);
+    await commentRef.set(comment.toMap());
   }
 
   Future<void> toggleLike({

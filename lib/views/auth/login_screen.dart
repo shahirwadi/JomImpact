@@ -46,7 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final vm = context.watch<AuthViewModel>();
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
+      backgroundColor: AppTheme.primaryLight,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -55,7 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 40),
+                const SizedBox(height: 48),
                 // Logo area
                 Center(
                   child: Column(
@@ -64,35 +64,41 @@ class _LoginScreenState extends State<LoginScreen> {
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
-                          color: AppTheme.primary,
-                          borderRadius: BorderRadius.circular(22),
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(28),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.primaryDark.withOpacity(0.16),
+                              blurRadius: 28,
+                              offset: const Offset(0, 12),
+                            ),
+                          ],
                         ),
                         child: const Icon(Icons.volunteer_activism,
-                            color: Colors.white, size: 44),
+                            color: AppTheme.primary, size: 44),
                       ),
                       const SizedBox(height: 14),
                       const Text('JomImpact',
                           style: TextStyle(
                               fontSize: 30,
                               fontWeight: FontWeight.w800,
-                              color: AppTheme.primary)),
+                              color: Colors.white)),
                       const SizedBox(height: 4),
                       const Text('Connecting volunteers with meaningful events',
-                          style: TextStyle(
-                              fontSize: 13, color: AppTheme.textMedium),
+                          style: TextStyle(fontSize: 13, color: Colors.white),
                           textAlign: TextAlign.center),
                     ],
                   ),
                 ),
                 const SizedBox(height: 36),
-                const Text('Welcome back 👋',
+                const Text('Welcome back',
                     style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: AppTheme.textDark)),
+                        color: Colors.white)),
                 const SizedBox(height: 4),
                 const Text('Sign in to your account',
-                    style: TextStyle(fontSize: 14, color: AppTheme.textMedium)),
+                    style: TextStyle(fontSize: 14, color: Colors.white)),
                 const SizedBox(height: 24),
 
                 // Quick login buttons
@@ -193,7 +199,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Text("Don't have an account? ",
-                          style: TextStyle(color: AppTheme.textMedium)),
+                          style: TextStyle(color: Colors.white)),
                       GestureDetector(
                         onTap: () => Navigator.push(
                             context,
@@ -201,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 builder: (_) => const RegisterScreen())),
                         child: const Text('Register',
                             style: TextStyle(
-                                color: AppTheme.primary,
+                                color: Colors.white,
                                 fontWeight: FontWeight.w700)),
                       ),
                     ],

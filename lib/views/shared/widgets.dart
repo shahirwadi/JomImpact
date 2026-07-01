@@ -6,6 +6,55 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../models/event_model.dart';
 import '../../utils/app_theme.dart';
 
+class ReferenceBottomNavigationBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+  final List<BottomNavigationBarItem> items;
+
+  const ReferenceBottomNavigationBar({
+    super.key,
+    required this.currentIndex,
+    required this.onTap,
+    required this.items,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(32),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryDark.withOpacity(0.16),
+              blurRadius: 30,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: BottomNavigationBar(
+          currentIndex: currentIndex,
+          onTap: onTap,
+          items: items,
+          backgroundColor: Colors.white,
+          selectedItemColor: AppTheme.secondary,
+          unselectedItemColor: AppTheme.textDark,
+          type: BottomNavigationBarType.fixed,
+          elevation: 0,
+          selectedFontSize: 11,
+          unselectedFontSize: 11,
+          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w700),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+      ),
+    );
+  }
+}
+
 class EventCard extends StatelessWidget {
   final EventModel event;
   final VoidCallback onTap;
@@ -29,8 +78,14 @@ class EventCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(
           color: AppTheme.card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.divider),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryDark.withOpacity(0.08),
+              blurRadius: 24,
+              offset: const Offset(0, 10),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,7 +95,7 @@ class EventCard extends StatelessWidget {
               height: compact ? 80 : 110,
               decoration: BoxDecoration(
                 borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(16)),
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: Stack(
                 children: [
@@ -49,7 +104,7 @@ class EventCard extends StatelessWidget {
                       imageUrl: event.imageUrl,
                       category: event.category,
                       borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(16),
+                        top: Radius.circular(24),
                       ),
                     ),
                   ),
@@ -326,8 +381,14 @@ class OrganizerCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           color: AppTheme.card,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.divider),
+          borderRadius: BorderRadius.circular(22),
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.primaryDark.withOpacity(0.07),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+            ),
+          ],
         ),
         child: Row(
           children: [

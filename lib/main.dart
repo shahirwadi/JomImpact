@@ -89,7 +89,7 @@ class _SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.primary,
+      backgroundColor: AppTheme.primaryLight,
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -98,11 +98,11 @@ class _SplashScreen extends StatelessWidget {
               width: 90,
               height: 90,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(24),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(28),
               ),
               child: const Icon(Icons.volunteer_activism,
-                  color: Colors.white, size: 52),
+                  color: AppTheme.primary, size: 52),
             ),
             const SizedBox(height: 20),
             const Text('JomImpact',

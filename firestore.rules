@@ -238,12 +238,19 @@ service cloud.firestore {
         && request.resource.data.commentCount == 0
         && request.resource.data.createdAt is string;
 
-      allow update: if isLoggedIn()
-        && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['likedBy', 'commentCount'])
-        && request.resource.data.likedBy is list
-        && request.resource.data.commentCount is int
-        && request.resource.data.commentCount >= resource.data.commentCount;
+      allow update: if isLoggedIn() && (
+        (
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['commentCount'])
+          && request.resource.data.commentCount is int
+          && request.resource.data.commentCount
+            == resource.data.get('commentCount', 0) + 1
+        ) || (
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['likedBy'])
+          && request.resource.data.likedBy is list
+        )
+      );
 
       allow delete: if false;
 
@@ -251,27 +258,12 @@ service cloud.firestore {
         allow read: if isLoggedIn();
 
         allow create: if isLoggedIn()
-          && request.resource.data.keys().hasOnly([
-            'id',
-            'postId',
-            'authorId',
-            'authorName',
-            'authorPhotoUrl',
-            'authorRole',
-            'content',
-            'createdAt'
-          ])
           && request.resource.data.id == commentId
           && request.resource.data.postId == postId
           && request.resource.data.authorId == request.auth.uid
-          && request.resource.data.authorName is string
-          && request.resource.data.authorName.size() > 0
-          && hasOptionalString(request.resource.data, 'authorPhotoUrl')
-          && isFeedRole(request.resource.data.authorRole)
           && request.resource.data.content is string
           && request.resource.data.content.size() > 0
-          && request.resource.data.content.size() <= 1000
-          && request.resource.data.createdAt is string;
+          && request.resource.data.content.size() <= 1000;
 
         allow update, delete: if false;
       }

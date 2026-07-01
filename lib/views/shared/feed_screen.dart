@@ -460,10 +460,14 @@ class _FeedPostCard extends StatelessWidget {
                         ),
                   ),
                   const SizedBox(width: 8),
-                  _PostAction(
-                    icon: Icons.chat_bubble_outline,
-                    label: '${post.commentCount}',
-                    onTap: () => _showComments(context, post, currentUser),
+                  StreamBuilder<int>(
+                    stream: service.commentCountStream(post.id),
+                    initialData: post.commentCount,
+                    builder: (context, countSnapshot) => _PostAction(
+                      icon: Icons.chat_bubble_outline,
+                      label: '${countSnapshot.data ?? post.commentCount}',
+                      onTap: () => _showComments(context, post, currentUser),
+                    ),
                   ),
                 ],
               ),
@@ -506,6 +510,7 @@ class _CommentsSheet extends StatefulWidget {
 
 class _CommentsSheetState extends State<_CommentsSheet> {
   final _commentCtrl = TextEditingController();
+  bool _isSending = false;
 
   @override
   void dispose() {
@@ -514,13 +519,26 @@ class _CommentsSheetState extends State<_CommentsSheet> {
   }
 
   Future<void> _send() async {
+    if (_commentCtrl.text.trim().isEmpty || _isSending) return;
+    setState(() => _isSending = true);
     final vm = context.read<FeedViewModel>();
     final ok = await vm.addComment(
       postId: widget.post.id,
       author: widget.currentUser,
       content: _commentCtrl.text,
     );
-    if (ok) _commentCtrl.clear();
+    if (!mounted) return;
+    setState(() => _isSending = false);
+    if (ok) {
+      _commentCtrl.clear();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(vm.error ?? 'Unable to add comment.'),
+          backgroundColor: AppTheme.error,
+        ),
+      );
+    }
   }
 
   @override
@@ -618,8 +636,17 @@ class _CommentsSheetState extends State<_CommentsSheet> {
                     width: 44,
                     height: 44,
                     child: IconButton.filled(
-                      onPressed: _send,
-                      icon: const Icon(Icons.send, size: 18),
+                      onPressed: _isSending ? null : _send,
+                      icon: _isSending
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.send, size: 18),
                       style: IconButton.styleFrom(
                         backgroundColor: AppTheme.primary,
                         foregroundColor: Colors.white,
