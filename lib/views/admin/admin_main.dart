@@ -24,7 +24,7 @@ class _AdminMainState extends State<AdminMain> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true,
+      extendBody: false,
       body: IndexedStack(index: _index, children: _screens),
       bottomNavigationBar: ReferenceBottomNavigationBar(
         currentIndex: _index,

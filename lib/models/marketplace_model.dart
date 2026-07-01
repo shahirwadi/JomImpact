@@ -21,6 +21,7 @@ class MarketplaceItemModel {
   final String title;
   final String description;
   final double price;
+  final int quantity;
   final String? imageUrl;
   final bool isAvailable;
   final MarketplaceItemStatus status;
@@ -36,6 +37,7 @@ class MarketplaceItemModel {
     required this.title,
     required this.description,
     required this.price,
+    this.quantity = 1,
     this.imageUrl,
     this.isAvailable = true,
     this.status = MarketplaceItemStatus.pending,
@@ -53,6 +55,7 @@ class MarketplaceItemModel {
       'title': title,
       'description': description,
       'price': price,
+      'quantity': quantity,
       'imageUrl': imageUrl,
       'isAvailable': isAvailable,
       'status': enumValueName(status),
@@ -71,6 +74,7 @@ class MarketplaceItemModel {
       title: map['title'],
       description: map['description'],
       price: (map['price'] as num).toDouble(),
+      quantity: (map['quantity'] as num?)?.toInt() ?? 1,
       imageUrl: map['imageUrl'],
       isAvailable: map['isAvailable'] ?? true,
       status: enumFromName(MarketplaceItemStatus.values, map['status']),

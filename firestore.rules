@@ -249,10 +249,27 @@ service cloud.firestore {
           request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['likedBy'])
           && request.resource.data.likedBy is list
+        ) || (
+          resource.data.authorId == request.auth.uid
+          && request.resource.data.authorId == resource.data.authorId
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['content', 'imageUrl', 'updatedAt'])
+          && request.resource.data.content is string
+          && request.resource.data.content.size() <= 2000
+          && hasOptionalString(request.resource.data, 'imageUrl')
+          && (
+            request.resource.data.content.size() > 0 ||
+            (
+              request.resource.data.get('imageUrl', null) is string
+              && request.resource.data.imageUrl.size() > 0
+            )
+          )
+          && request.resource.data.updatedAt is string
         )
       );
 
-      allow delete: if false;
+      allow delete: if isLoggedIn()
+        && resource.data.authorId == request.auth.uid;
 
       match /comments/{commentId} {
         allow read: if isLoggedIn();
@@ -285,6 +302,7 @@ service cloud.firestore {
           'title',
           'description',
           'price',
+          'quantity',
           'imageUrl',
           'isAvailable',
           'status',
@@ -305,6 +323,8 @@ service cloud.firestore {
         && request.resource.data.description.size() <= 2000
         && request.resource.data.price is number
         && request.resource.data.price > 0
+        && request.resource.data.quantity is int
+        && request.resource.data.quantity > 0
         && hasOptionalString(request.resource.data, 'imageUrl')
         && request.resource.data.isAvailable == true
         && request.resource.data.status == 'pending'
@@ -328,9 +348,21 @@ service cloud.firestore {
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['isAvailable'])
           && request.resource.data.isAvailable is bool
+      ) || (
+        isVolunteer()
+          && resource.data.status == 'approved'
+          && resource.data.get('isAvailable', true) == true
+          && resource.data.get('quantity', 1) > 0
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['quantity', 'isAvailable'])
+          && request.resource.data.quantity
+            == resource.data.get('quantity', 1) - 1
+          && request.resource.data.isAvailable
+            == (request.resource.data.quantity > 0)
       );
 
-      allow delete: if false;
+      allow delete: if isApprovedOrganizer()
+        && resource.data.organizerId == request.auth.uid;
     }
 
     // Organizer-only notes live separately because rules cannot hide fields.
@@ -434,6 +466,7 @@ service cloud.firestore {
         && request.resource.data.updatedAt == request.resource.data.createdAt
         && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.status == 'approved'
         && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.get('isAvailable', true) == true
+        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.get('quantity', 1) > 0
         && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.title == request.resource.data.itemTitle
         && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.organizerId == request.resource.data.organizerId
         && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.price == request.resource.data.price;

@@ -67,6 +67,24 @@ void main() {
     });
 
     expect(item.isAvailable, isTrue);
+    expect(item.quantity, 1);
+  });
+
+  test('marketplace listing quantity round-trips', () {
+    final item = MarketplaceItemModel(
+      id: 'item-quantity',
+      organizerId: 'organizer-1',
+      organizerName: 'Community Kitchen',
+      title: 'Reusable Bottle',
+      description: 'A reusable water bottle.',
+      price: 18,
+      quantity: 12,
+      createdAt: DateTime(2026, 7, 2),
+    );
+
+    final restored = MarketplaceItemModel.fromMap(item.toMap());
+
+    expect(restored.quantity, 12);
   });
 
   test('filtered applicant export creates safe Excel-friendly CSV', () {

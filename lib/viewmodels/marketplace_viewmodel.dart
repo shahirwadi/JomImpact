@@ -20,6 +20,7 @@ class MarketplaceViewModel extends ChangeNotifier {
     required String title,
     required String description,
     required double price,
+    required int quantity,
     String? imageUrl,
   }) async {
     if (title.trim().isEmpty || description.trim().isEmpty) {
@@ -29,6 +30,11 @@ class MarketplaceViewModel extends ChangeNotifier {
     }
     if (price <= 0) {
       _error = 'Enter a valid price.';
+      notifyListeners();
+      return false;
+    }
+    if (quantity <= 0) {
+      _error = 'Quantity must be at least 1.';
       notifyListeners();
       return false;
     }
@@ -42,8 +48,26 @@ class MarketplaceViewModel extends ChangeNotifier {
         title: title,
         description: description,
         price: price,
+        quantity: quantity,
         imageUrl: imageUrl,
       );
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteItem(String itemId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await _service.deleteItem(itemId: itemId);
       _isLoading = false;
       notifyListeners();
       return true;
