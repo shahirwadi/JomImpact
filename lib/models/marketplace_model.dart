@@ -12,7 +12,7 @@ enum MarketplacePurchaseStatus {
   cancelled,
 }
 
-enum MarketplacePaymentStatus { notCollected }
+enum MarketplacePaymentStatus { notCollected, paid }
 
 class MarketplaceItemModel {
   final String id;
@@ -21,6 +21,7 @@ class MarketplaceItemModel {
   final String title;
   final String description;
   final double price;
+  final int quantity;
   final String? imageUrl;
   final bool isAvailable;
   final MarketplaceItemStatus status;
@@ -36,6 +37,7 @@ class MarketplaceItemModel {
     required this.title,
     required this.description,
     required this.price,
+    this.quantity = 1,
     this.imageUrl,
     this.isAvailable = true,
     this.status = MarketplaceItemStatus.pending,
@@ -53,6 +55,7 @@ class MarketplaceItemModel {
       'title': title,
       'description': description,
       'price': price,
+      'quantity': quantity,
       'imageUrl': imageUrl,
       'isAvailable': isAvailable,
       'status': enumValueName(status),
@@ -71,6 +74,7 @@ class MarketplaceItemModel {
       title: map['title'],
       description: map['description'],
       price: (map['price'] as num).toDouble(),
+      quantity: (map['quantity'] as num?)?.toInt() ?? 1,
       imageUrl: map['imageUrl'],
       isAvailable: map['isAvailable'] ?? true,
       status: enumFromName(MarketplaceItemStatus.values, map['status']),
@@ -103,6 +107,7 @@ class MarketplacePurchaseModel {
   final double price;
   final MarketplacePurchaseStatus status;
   final MarketplacePaymentStatus paymentStatus;
+  final String? stripePaymentIntentId;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -126,6 +131,7 @@ class MarketplacePurchaseModel {
     required this.price,
     this.status = MarketplacePurchaseStatus.confirmed,
     this.paymentStatus = MarketplacePaymentStatus.notCollected,
+    this.stripePaymentIntentId,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -162,6 +168,7 @@ class MarketplacePurchaseModel {
       'price': price,
       'status': enumValueName(status),
       'paymentStatus': enumValueName(paymentStatus),
+      'stripePaymentIntentId': stripePaymentIntentId,
       'createdAt': createdAt.toIso8601String(),
       'updatedAt': updatedAt.toIso8601String(),
     };
@@ -196,6 +203,7 @@ class MarketplacePurchaseModel {
         map['paymentStatus'] ??
             enumValueName(MarketplacePaymentStatus.notCollected),
       ),
+      stripePaymentIntentId: map['stripePaymentIntentId'],
       createdAt: createdAt,
       updatedAt: DateTime.parse(map['updatedAt'] ?? map['createdAt']),
     );

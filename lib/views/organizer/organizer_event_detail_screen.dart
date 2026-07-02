@@ -117,11 +117,17 @@ class _OrganizerEventDetailScreenState extends State<OrganizerEventDetailScreen>
             actions: [
               IconButton(
                 icon: const Icon(Icons.edit_outlined, color: Colors.white),
-                onPressed: () => Navigator.push(
+                onPressed: () async {
+                  final updated = await Navigator.push<EventModel>(
                     context,
                     MaterialPageRoute(
-                        builder: (_) =>
-                            CreateEventScreen(eventToEdit: _event))),
+                      builder: (_) => CreateEventScreen(eventToEdit: _event),
+                    ),
+                  );
+                  if (updated != null && mounted) {
+                    setState(() => _event = updated);
+                  }
+                },
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.white),

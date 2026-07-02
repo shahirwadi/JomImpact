@@ -50,7 +50,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       _titleCtrl.text = e.title;
       _descCtrl.text = e.description;
       _locationCtrl.text = e.location;
-      _selectedState = e.state;
+      _selectedState = isMalaysiaState(e.state) ? e.state : null;
       _maxVolCtrl.text = e.maxVolunteers.toString();
       _category = e.category;
       _startDate = e.startDate;
@@ -74,11 +74,19 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
   }
 
   Future<void> _pickDate(bool isStart) async {
+    final selectedDate = isStart ? _startDate : _endDate;
+    final today = DateUtils.dateOnly(DateTime.now());
+    final initialDate = DateUtils.dateOnly(selectedDate);
+    final firstDate =
+        _isEditing && initialDate.isBefore(today) ? initialDate : today;
+    final defaultLastDate = today.add(const Duration(days: 365));
+    final lastDate =
+        initialDate.isAfter(defaultLastDate) ? initialDate : defaultLastDate;
     final date = await showDatePicker(
       context: context,
-      initialDate: isStart ? _startDate : _endDate,
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
     );
     if (date == null) return;
     final time = await showTimePicker(
@@ -156,6 +164,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
       return;
     }
     bool ok;
+    EventModel? savedEvent;
     if (_isEditing) {
       final updated = widget.eventToEdit!.copyWith(
         title: _titleCtrl.text.trim(),
@@ -174,6 +183,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
         benefits: List.from(_benefits),
       );
       ok = await vm.updateEvent(updated);
+      if (ok) savedEvent = updated;
     } else {
       ok = await vm.createEvent(
         organizer: authVm.currentUser!,
@@ -201,7 +211,7 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
             : (vm.error ?? 'Something went wrong.')),
         backgroundColor: ok ? AppTheme.success : AppTheme.error,
       ));
-      if (ok) Navigator.pop(context);
+      if (ok) Navigator.pop(context, savedEvent);
     }
   }
 
@@ -358,6 +368,10 @@ class _CreateEventScreenState extends State<CreateEventScreen> {
                   if (_imageUrlCtrl.text.trim().isNotEmpty)
                     OutlinedButton(
                       onPressed: () => setState(() => _imageUrlCtrl.clear()),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(0, 54),
+                        padding: const EdgeInsets.symmetric(horizontal: 18),
+                      ),
                       child: const Text('Remove'),
                     ),
                 ],

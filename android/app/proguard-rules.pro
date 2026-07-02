@@ -1,0 +1,3 @@
+-dontwarn com.stripe.android.pushProvisioning.**
+-dontwarn kotlinx.parcelize.**
+-keep class com.stripe.** { *; }

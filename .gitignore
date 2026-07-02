@@ -47,3 +47,5 @@ app.*.map.json
 # Local setup files
 /env/dev.json
 /scripts/serviceAccountKey.json
+/functions/node_modules/
+/backend/node_modules/

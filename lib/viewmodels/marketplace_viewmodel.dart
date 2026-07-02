@@ -4,9 +4,11 @@ import 'package:flutter/foundation.dart';
 import '../models/marketplace_model.dart';
 import '../models/user_model.dart';
 import '../services/firebase_marketplace_service.dart';
+import '../services/stripe_payment_service.dart';
 
 class MarketplaceViewModel extends ChangeNotifier {
   final FirebaseMarketplaceService _service = FirebaseMarketplaceService();
+  final StripePaymentService _stripe = StripePaymentService();
 
   bool _isLoading = false;
   String? _error;
@@ -20,6 +22,7 @@ class MarketplaceViewModel extends ChangeNotifier {
     required String title,
     required String description,
     required double price,
+    required int quantity,
     String? imageUrl,
   }) async {
     if (title.trim().isEmpty || description.trim().isEmpty) {
@@ -29,6 +32,11 @@ class MarketplaceViewModel extends ChangeNotifier {
     }
     if (price <= 0) {
       _error = 'Enter a valid price.';
+      notifyListeners();
+      return false;
+    }
+    if (quantity <= 0) {
+      _error = 'Quantity must be at least 1.';
       notifyListeners();
       return false;
     }
@@ -42,8 +50,26 @@ class MarketplaceViewModel extends ChangeNotifier {
         title: title,
         description: description,
         price: price,
+        quantity: quantity,
         imageUrl: imageUrl,
       );
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = e.toString();
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteItem(String itemId) async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    try {
+      await _service.deleteItem(itemId: itemId);
       _isLoading = false;
       notifyListeners();
       return true;
@@ -127,7 +153,7 @@ class MarketplaceViewModel extends ChangeNotifier {
     _error = null;
     notifyListeners();
     try {
-      final purchase = await _service.createPurchase(
+      final purchase = await _stripe.payForItem(
         item: item,
         buyer: buyer,
         recipientName: recipientName,

@@ -74,6 +74,7 @@ class FirebaseMarketplaceService {
     required String title,
     required String description,
     required double price,
+    required int quantity,
     String? imageUrl,
   }) async {
     final item = MarketplaceItemModel(
@@ -83,6 +84,7 @@ class FirebaseMarketplaceService {
       title: title.trim(),
       description: description.trim(),
       price: price,
+      quantity: quantity,
       imageUrl: imageUrl?.trim().isEmpty == true ? null : imageUrl?.trim(),
       createdAt: DateTime.now(),
     );
@@ -110,6 +112,12 @@ class FirebaseMarketplaceService {
     required bool isAvailable,
   }) async {
     await _items.doc(itemId).update({'isAvailable': isAvailable});
+  }
+
+  Future<void> deleteItem({
+    required String itemId,
+  }) async {
+    await _items.doc(itemId).delete();
   }
 
   Future<MarketplacePurchaseModel> createPurchase({
@@ -149,7 +157,22 @@ class FirebaseMarketplaceService {
       updatedAt: now,
     );
 
-    await _purchases.doc(purchase.id).set(purchase.toMap());
+    final itemRef = _items.doc(item.id);
+    final purchaseRef = _purchases.doc(purchase.id);
+    await _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(itemRef);
+      if (!snapshot.exists) throw StateError('This listing no longer exists.');
+      final current = MarketplaceItemModel.fromMap(snapshot.data()!);
+      if (!current.isAvailable || current.quantity <= 0) {
+        throw StateError('This item is out of stock.');
+      }
+      final remaining = current.quantity - 1;
+      transaction.set(purchaseRef, purchase.toMap());
+      transaction.update(itemRef, {
+        'quantity': remaining,
+        'isAvailable': remaining > 0,
+      });
+    });
     return purchase;
   }
 

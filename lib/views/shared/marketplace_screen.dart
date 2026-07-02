@@ -147,11 +147,12 @@ class _ShopTab extends StatelessWidget {
           separatorBuilder: (_, __) => const SizedBox(height: 12),
           itemBuilder: (context, index) {
             final item = items[index];
+            final inStock = item.isAvailable && item.quantity > 0;
             return _MarketplaceItemCard(
               item: item,
               shopView: true,
-              actionLabel: item.isAvailable ? 'Buy now' : null,
-              onAction: item.isAvailable
+              actionLabel: inStock ? 'Buy now' : null,
+              onAction: inStock
                   ? () => Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (_) => MarketplaceCheckoutScreen(
@@ -422,7 +423,7 @@ class _MarketplaceCheckoutScreenState extends State<MarketplaceCheckoutScreen> {
     final loading = context.watch<MarketplaceViewModel>().isLoading;
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(title: const Text('Postage details')),
+      appBar: AppBar(title: const Text('Secure checkout')),
       body: Form(
         key: _formKey,
         child: ListView(
@@ -522,8 +523,12 @@ class _MarketplaceCheckoutScreenState extends State<MarketplaceCheckoutScreen> {
                         color: Colors.white,
                       ),
                     )
-                  : const Icon(Icons.check_circle_outline),
-              label: Text(loading ? 'Placing order…' : 'Confirm order'),
+                  : const Icon(Icons.lock_outline),
+              label: Text(
+                loading
+                    ? 'Opening Stripe…'
+                    : 'Pay RM ${widget.item.price.toStringAsFixed(2)}',
+              ),
             ),
           ],
         ),
@@ -606,7 +611,12 @@ class MarketplaceOrderDetailScreen extends StatelessWidget {
             ),
             ('Total', 'RM ${order.price.toStringAsFixed(2)}'),
             ('Status', _orderStatusLabel(order.status)),
-            ('Payment', 'Not collected'),
+            (
+              'Payment',
+              order.paymentStatus == MarketplacePaymentStatus.paid
+                  ? 'Paid with Stripe'
+                  : 'Not collected'
+            ),
           ]),
           const SizedBox(height: 14),
           _DetailCard(title: 'Postage details', rows: [
@@ -618,7 +628,8 @@ class MarketplaceOrderDetailScreen extends StatelessWidget {
               ('Instructions', order.deliveryInstructions!),
           ]),
           const SizedBox(height: 14),
-          const _PaymentNotice(),
+          if (order.paymentStatus != MarketplacePaymentStatus.paid)
+            const _PaymentNotice(),
           if (isOrganizer) ...[
             const SizedBox(height: 20),
             const _SectionTitle('Update order status'),
@@ -666,6 +677,41 @@ class _OrganizerListingsTab extends StatelessWidget {
     ));
   }
 
+  Future<void> _deleteListing(
+    BuildContext context,
+    MarketplaceItemModel item,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Delete listing?'),
+        content: Text('Delete "${item.title}" permanently?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: AppTheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+    final vm = context.read<MarketplaceViewModel>();
+    final ok = await vm.deleteItem(item.id);
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(
+          ok ? 'Listing deleted.' : vm.error ?? 'Unable to delete listing.'),
+      backgroundColor: ok ? AppTheme.success : AppTheme.error,
+    ));
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<MarketplaceViewModel>();
@@ -702,6 +748,7 @@ class _OrganizerListingsTab extends StatelessWidget {
               availabilityLoading: vm.isLoading,
               onAvailabilityChanged: (value) =>
                   _setAvailability(context, item, value),
+              onDelete: () => _deleteListing(context, item),
             );
           },
         );
@@ -728,6 +775,7 @@ class _MarketplaceCreateListingScreenState
   final _titleCtrl = TextEditingController();
   final _descriptionCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
+  final _quantityCtrl = TextEditingController(text: '1');
   final _imageUrlCtrl = TextEditingController();
 
   @override
@@ -735,6 +783,7 @@ class _MarketplaceCreateListingScreenState
     _titleCtrl.dispose();
     _descriptionCtrl.dispose();
     _priceCtrl.dispose();
+    _quantityCtrl.dispose();
     _imageUrlCtrl.dispose();
     super.dispose();
   }
@@ -747,6 +796,11 @@ class _MarketplaceCreateListingScreenState
     return price == null || price <= 0 ? 'Enter a valid price' : null;
   }
 
+  String? _quantity(String? value) {
+    final quantity = int.tryParse(value?.trim() ?? '');
+    return quantity == null || quantity < 1 ? 'Enter a valid quantity' : null;
+  }
+
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     final vm = context.read<MarketplaceViewModel>();
@@ -755,6 +809,7 @@ class _MarketplaceCreateListingScreenState
       title: _titleCtrl.text,
       description: _descriptionCtrl.text,
       price: double.parse(_priceCtrl.text.trim()),
+      quantity: int.parse(_quantityCtrl.text.trim()),
       imageUrl: _imageUrlCtrl.text,
     );
     if (!mounted) return;
@@ -813,6 +868,16 @@ class _MarketplaceCreateListingScreenState
             ),
             const SizedBox(height: 12),
             TextFormField(
+              controller: _quantityCtrl,
+              validator: _quantity,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Quantity *',
+                prefixIcon: Icon(Icons.inventory_2_outlined),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
               controller: _imageUrlCtrl,
               keyboardType: TextInputType.url,
               decoration:
@@ -848,6 +913,7 @@ class _MarketplaceItemCard extends StatelessWidget {
   final bool showAvailability;
   final bool availabilityLoading;
   final ValueChanged<bool>? onAvailabilityChanged;
+  final VoidCallback? onDelete;
   const _MarketplaceItemCard({
     required this.item,
     this.shopView = false,
@@ -856,6 +922,7 @@ class _MarketplaceItemCard extends StatelessWidget {
     this.showAvailability = false,
     this.availabilityLoading = false,
     this.onAvailabilityChanged,
+    this.onDelete,
   });
 
   @override
@@ -900,6 +967,17 @@ class _MarketplaceItemCard extends StatelessWidget {
                     ),
                   ),
                 ]),
+                const SizedBox(height: 6),
+                Text(
+                  '${item.quantity} ${item.quantity == 1 ? 'unit' : 'units'} in stock',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: item.quantity > 0
+                        ? AppTheme.textMedium
+                        : AppTheme.error,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Text(
                   item.organizerName,
@@ -965,11 +1043,30 @@ class _MarketplaceItemCard extends StatelessWidget {
                     ),
                     Switch.adaptive(
                       value: item.isAvailable,
-                      onChanged:
-                          availabilityLoading ? null : onAvailabilityChanged,
+                      onChanged: availabilityLoading || item.quantity <= 0
+                          ? null
+                          : onAvailabilityChanged,
+                    ),
+                    IconButton(
+                      tooltip: 'Delete listing',
+                      onPressed: availabilityLoading ? null : onDelete,
+                      icon: const Icon(Icons.delete_outline),
+                      color: AppTheme.error,
                     ),
                   ]),
                 ],
+                if (!showAvailability && onDelete != null)
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      onPressed: onDelete,
+                      icon: const Icon(Icons.delete_outline, size: 18),
+                      label: const Text('Delete'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.error,
+                      ),
+                    ),
+                  ),
                 if ((item.adminNotes ?? '').isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(item.adminNotes!,
@@ -1038,11 +1135,11 @@ class _PaymentNotice extends StatelessWidget {
         border: Border.all(color: AppTheme.secondary.withValues(alpha: 0.25)),
       ),
       child: const Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Icon(Icons.info_outline, color: AppTheme.secondary, size: 21),
+        Icon(Icons.lock_outline, color: AppTheme.secondary, size: 21),
         SizedBox(width: 10),
         Expanded(
           child: Text(
-            'Online payment is not collected yet. Stripe payment will be added later.',
+            'Secure test payment powered by Stripe. Your card details are handled directly by Stripe.',
             style: TextStyle(
                 fontSize: 12, height: 1.4, color: AppTheme.textMedium),
           ),

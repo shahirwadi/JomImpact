@@ -37,7 +37,7 @@ class FeedPostModel {
 
   bool get wasEdited => updatedAt != null;
 
-  bool get canEdit => DateTime.now().difference(createdAt).inMinutes < 10;
+  bool get canEdit => true;
 
   Map<String, dynamic> toMap() {
     return {

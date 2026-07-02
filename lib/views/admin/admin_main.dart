@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../utils/app_theme.dart';
 import 'admin_marketplace_requests_screen.dart';
 import 'admin_organizer_requests_screen.dart';
 import 'admin_profile_screen.dart';
+import '../shared/widgets.dart';
 
 class AdminMain extends StatefulWidget {
   const AdminMain({super.key});
@@ -24,12 +24,11 @@ class _AdminMainState extends State<AdminMain> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: false,
       body: IndexedStack(index: _index, children: _screens),
-      bottomNavigationBar: BottomNavigationBar(
+      bottomNavigationBar: ReferenceBottomNavigationBar(
         currentIndex: _index,
         onTap: (value) => setState(() => _index = value),
-        selectedItemColor: AppTheme.primary,
-        unselectedItemColor: AppTheme.textLight,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.verified_user_outlined),

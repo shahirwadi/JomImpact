@@ -238,40 +238,49 @@ service cloud.firestore {
         && request.resource.data.commentCount == 0
         && request.resource.data.createdAt is string;
 
-      allow update: if isLoggedIn()
-        && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['likedBy', 'commentCount'])
-        && request.resource.data.likedBy is list
-        && request.resource.data.commentCount is int
-        && request.resource.data.commentCount >= resource.data.commentCount;
+      allow update: if isLoggedIn() && (
+        (
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['commentCount'])
+          && request.resource.data.commentCount is int
+          && request.resource.data.commentCount
+            == resource.data.get('commentCount', 0) + 1
+        ) || (
+          request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['likedBy'])
+          && request.resource.data.likedBy is list
+        ) || (
+          resource.data.authorId == request.auth.uid
+          && request.resource.data.authorId == resource.data.authorId
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['content', 'imageUrl', 'updatedAt'])
+          && request.resource.data.content is string
+          && request.resource.data.content.size() <= 2000
+          && hasOptionalString(request.resource.data, 'imageUrl')
+          && (
+            request.resource.data.content.size() > 0 ||
+            (
+              request.resource.data.get('imageUrl', null) is string
+              && request.resource.data.imageUrl.size() > 0
+            )
+          )
+          && request.resource.data.updatedAt is string
+        )
+      );
 
-      allow delete: if false;
+      allow delete: if isLoggedIn()
+        && resource.data.authorId == request.auth.uid;
 
       match /comments/{commentId} {
         allow read: if isLoggedIn();
 
         allow create: if isLoggedIn()
-          && request.resource.data.keys().hasOnly([
-            'id',
-            'postId',
-            'authorId',
-            'authorName',
-            'authorPhotoUrl',
-            'authorRole',
-            'content',
-            'createdAt'
-          ])
           && request.resource.data.id == commentId
           && request.resource.data.postId == postId
           && request.resource.data.authorId == request.auth.uid
-          && request.resource.data.authorName is string
-          && request.resource.data.authorName.size() > 0
-          && hasOptionalString(request.resource.data, 'authorPhotoUrl')
-          && isFeedRole(request.resource.data.authorRole)
           && request.resource.data.content is string
           && request.resource.data.content.size() > 0
-          && request.resource.data.content.size() <= 1000
-          && request.resource.data.createdAt is string;
+          && request.resource.data.content.size() <= 1000;
 
         allow update, delete: if false;
       }
@@ -293,6 +302,7 @@ service cloud.firestore {
           'title',
           'description',
           'price',
+          'quantity',
           'imageUrl',
           'isAvailable',
           'status',
@@ -313,6 +323,8 @@ service cloud.firestore {
         && request.resource.data.description.size() <= 2000
         && request.resource.data.price is number
         && request.resource.data.price > 0
+        && request.resource.data.quantity is int
+        && request.resource.data.quantity > 0
         && hasOptionalString(request.resource.data, 'imageUrl')
         && request.resource.data.isAvailable == true
         && request.resource.data.status == 'pending'
@@ -338,7 +350,8 @@ service cloud.firestore {
           && request.resource.data.isAvailable is bool
       );
 
-      allow delete: if false;
+      allow delete: if isApprovedOrganizer()
+        && resource.data.organizerId == request.auth.uid;
     }
 
     // Organizer-only notes live separately because rules cannot hide fields.
@@ -386,65 +399,9 @@ service cloud.firestore {
         resource.data.organizerId == request.auth.uid
       );
 
-      allow create: if isVolunteer()
-        && request.resource.data.keys().hasOnly([
-          'id',
-          'itemId',
-          'itemTitle',
-          'organizerId',
-          'buyerId',
-          'buyerName',
-          'buyerEmail',
-          'recipientName',
-          'phone',
-          'addressLine1',
-          'addressLine2',
-          'city',
-          'state',
-          'postcode',
-          'country',
-          'deliveryInstructions',
-          'price',
-          'status',
-          'paymentStatus',
-          'createdAt',
-          'updatedAt'
-        ])
-        && request.resource.data.id == purchaseId
-        && request.resource.data.buyerId == request.auth.uid
-        && request.resource.data.itemId is string
-        && request.resource.data.itemTitle is string
-        && request.resource.data.itemTitle.size() > 0
-        && request.resource.data.organizerId is string
-        && request.resource.data.buyerName is string
-        && request.resource.data.buyerName.size() > 0
-        && request.resource.data.buyerEmail is string
-        && request.resource.data.recipientName is string
-        && request.resource.data.recipientName.size() > 0
-        && request.resource.data.phone is string
-        && request.resource.data.phone.size() > 0
-        && request.resource.data.addressLine1 is string
-        && request.resource.data.addressLine1.size() > 0
-        && hasOptionalString(request.resource.data, 'addressLine2')
-        && request.resource.data.city is string
-        && request.resource.data.city.size() > 0
-        && request.resource.data.state is string
-        && request.resource.data.state.size() > 0
-        && request.resource.data.postcode is string
-        && request.resource.data.postcode.size() > 0
-        && request.resource.data.country == 'Malaysia'
-        && hasOptionalString(request.resource.data, 'deliveryInstructions')
-        && request.resource.data.price is number
-        && request.resource.data.price > 0
-        && request.resource.data.status == 'confirmed'
-        && request.resource.data.paymentStatus == 'notCollected'
-        && request.resource.data.createdAt is string
-        && request.resource.data.updatedAt == request.resource.data.createdAt
-        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.status == 'approved'
-        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.get('isAvailable', true) == true
-        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.title == request.resource.data.itemTitle
-        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.organizerId == request.resource.data.organizerId
-        && get(/databases/$(database)/documents/marketplaceItems/$(request.resource.data.itemId)).data.price == request.resource.data.price;
+      // Stripe-verified orders are created only by the Admin SDK in Cloud
+      // Functions, which bypasses client security rules.
+      allow create: if false;
 
       allow update: if isApprovedOrganizer()
         && resource.data.organizerId == request.auth.uid
