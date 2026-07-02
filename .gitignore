@@ -48,3 +48,4 @@ app.*.map.json
 /env/dev.json
 /scripts/serviceAccountKey.json
 /functions/node_modules/
+/backend/node_modules/

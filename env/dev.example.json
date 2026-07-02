@@ -1,5 +1,6 @@
 {
   "CLOUDINARY_CLOUD_NAME": "your-cloud-name",
   "CLOUDINARY_UPLOAD_PRESET": "your-upload-preset",
-  "STRIPE_PUBLISHABLE_KEY": "pk_test_replace_me"
+  "STRIPE_PUBLISHABLE_KEY": "pk_test_replace_me",
+  "STRIPE_BACKEND_URL": "https://your-project.vercel.app/api"
 }

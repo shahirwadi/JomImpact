@@ -1,15 +1,15 @@
-import 'package:cloud_functions/cloud_functions.dart';
+import 'dart:convert';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart' show ThemeMode;
 import 'package:flutter_stripe/flutter_stripe.dart';
+import 'package:http/http.dart' as http;
 
 import '../config/app_env.dart';
 import '../models/marketplace_model.dart';
 import '../models/user_model.dart';
 
 class StripePaymentService {
-  final FirebaseFunctions _functions =
-      FirebaseFunctions.instanceFor(region: 'asia-southeast1');
-
   Future<MarketplacePurchaseModel> payForItem({
     required MarketplaceItemModel item,
     required UserModel buyer,
@@ -24,14 +24,14 @@ class StripePaymentService {
   }) async {
     if (!AppEnv.isStripeConfigured) {
       throw StateError(
-        'Stripe test mode is not configured. Add STRIPE_PUBLISHABLE_KEY to env/dev.json and restart the app.',
+        'Stripe is not configured. Add STRIPE_PUBLISHABLE_KEY and STRIPE_BACKEND_URL to env/dev.json, then restart the app.',
       );
     }
 
-    final intentResult = await _functions
-        .httpsCallable('createStripePaymentIntent')
-        .call(<String, dynamic>{'itemId': item.id});
-    final intent = Map<String, dynamic>.from(intentResult.data as Map);
+    final intent = await _post(<String, dynamic>{
+      'action': 'createPaymentIntent',
+      'itemId': item.id,
+    });
     final clientSecret = intent['clientSecret'] as String?;
     final paymentIntentId = intent['paymentIntentId'] as String?;
     if (clientSecret == null || paymentIntentId == null) {
@@ -60,9 +60,8 @@ class StripePaymentService {
     );
     await Stripe.instance.presentPaymentSheet();
 
-    final finalizeResult = await _functions
-        .httpsCallable('finalizeStripeOrder')
-        .call(<String, dynamic>{
+    final order = await _post(<String, dynamic>{
+      'action': 'finalizeOrder',
       'paymentIntentId': paymentIntentId,
       'recipientName': recipientName.trim(),
       'phone': phone.trim(),
@@ -75,8 +74,27 @@ class StripePaymentService {
       'deliveryInstructions': _optional(deliveryInstructions),
     });
     return MarketplacePurchaseModel.fromMap(
-      Map<String, dynamic>.from(finalizeResult.data as Map),
+      order,
     );
+  }
+
+  Future<Map<String, dynamic>> _post(Map<String, dynamic> body) async {
+    final token = await FirebaseAuth.instance.currentUser?.getIdToken();
+    if (token == null) throw StateError('Sign in before paying.');
+    final response = await http.post(
+      Uri.parse(AppEnv.stripeBackendUrl),
+      headers: <String, String>{
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode(body),
+    );
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      final message = decoded is Map ? decoded['error'] : null;
+      throw StateError(message?.toString() ?? 'Payment server error.');
+    }
+    return Map<String, dynamic>.from(decoded as Map);
   }
 
   String? _optional(String? value) {

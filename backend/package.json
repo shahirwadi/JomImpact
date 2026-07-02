@@ -1,0 +1,11 @@
+{
+  "name": "jomimpact-stripe-backend",
+  "private": true,
+  "version": "1.0.0",
+  "engines": { "node": "22.x" },
+  "scripts": { "check": "node --check api/index.js" },
+  "dependencies": {
+    "firebase-admin": "^13.4.0",
+    "stripe": "^22.3.0"
+  }
+}
